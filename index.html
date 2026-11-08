@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Orbit · Les valeurs de l’IA en temps réel</title>
+    <meta name="description" content="Toutes les entreprises qui construisent l’IA — puces, infrastructure, cloud, logiciel — et leurs cours en temps réel, en cercles interactifs." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='10' fill='%237c5cff'/%3E%3Ccircle cx='32' cy='32' r='24' fill='none' stroke='%232ec5ff' stroke-width='3'/%3E%3Ccircle cx='54' cy='22' r='5' fill='%2319e68c'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <canvas id="stars" aria-hidden="true"></canvas>
+
+    <header class="topbar">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+          <circle cx="20" cy="20" r="6" />
+          <circle class="brand-orbit" cx="20" cy="20" r="15" />
+          <circle class="brand-moon" cx="35" cy="20" r="3" />
+        </svg>
+        <div>
+          <h1>AI<span>·</span>ORBIT</h1>
+          <p class="tagline">Les valeurs qui construisent l’IA</p>
+        </div>
+      </div>
+
+      <div class="stats" id="stats">
+        <div class="stat"><span class="stat-label">Indice IA</span><span class="stat-value" id="stat-index">—</span></div>
+        <div class="stat"><span class="stat-label">Capitalisation</span><span class="stat-value" id="stat-cap">—</span></div>
+        <div class="stat"><span class="stat-label">Hausse / Baisse</span><span class="stat-value"><b class="up" id="stat-up">0</b> / <b class="down" id="stat-down">0</b></span></div>
+      </div>
+
+      <div class="actions">
+        <button class="status" id="status" type="button" title="Source des données">
+          <i class="dot"></i><span id="status-text">Démarrage…</span>
+        </button>
+        <div class="view-toggle" role="tablist" aria-label="Vue">
+          <button role="tab" class="active" data-view="pack" aria-selected="true">Galaxie</button>
+          <button role="tab" data-view="orbit" aria-selected="false">Orbites</button>
+          <span class="view-toggle-pill" aria-hidden="true"></span>
+        </div>
+        <button class="icon-btn" id="open-settings" type="button" aria-label="Réglages">
+          <svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm8.94-2.06-.06-2.88 2-1.62-2-3.46-2.44.88-2.5-1.44L15.5 2.5h-4l-.44 2.42-2.5 1.44-2.44-.88-2 3.46 2 1.62v2.88l-2 1.62 2 3.46 2.44-.88 2.5 1.44.44 2.42h4l.44-2.42 2.5-1.44 2.44.88 2-3.46-2-1.62Z" /></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="tape" aria-label="Bandeau des cours"><div class="tape-track" id="tape"></div></div>
+
+    <nav class="filters" aria-label="Filtres">
+      <div class="chips" id="chips"></div>
+      <label class="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.3-4.3M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" /></svg>
+        <input id="search" type="search" placeholder="Rechercher : NVDA, Cloud…" autocomplete="off" />
+      </label>
+    </nav>
+
+    <main class="stage" id="stage">
+      <svg id="viz" role="img" aria-label="Carte interactive des entreprises de l’IA"></svg>
+      <p class="hint" id="hint">Cliquez sur un domaine pour zoomer · sur une bulle pour le détail</p>
+
+      <aside class="movers" id="movers" aria-label="Plus fortes variations">
+        <h2>En mouvement</h2>
+        <div class="movers-cols">
+          <div><h3 class="up">▲ Hausses</h3><ol id="gainers"></ol></div>
+          <div><h3 class="down">▼ Baisses</h3><ol id="losers"></ol></div>
+        </div>
+      </aside>
+
+      <div class="legend" aria-hidden="true">
+        <span>-3 %</span><i class="legend-bar"></i><span>+3 %</span>
+      </div>
+    </main>
+
+    <div class="tooltip" id="tooltip" role="tooltip"></div>
+
+    <aside class="panel" id="panel" aria-hidden="true">
+      <button class="panel-close" id="panel-close" aria-label="Fermer">×</button>
+      <div id="panel-body"></div>
+    </aside>
+
+    <dialog class="settings" id="settings">
+      <form method="dialog">
+        <h2>Source des données</h2>
+        <p>
+          Sans clé, le site tourne en <b>mode démo</b> avec des variations simulées (ce ne sont pas de vrais cours).
+          Pour les <b>vrais cours en temps réel</b>, créez une clé gratuite sur
+          <a href="https://finnhub.io/register" target="_blank" rel="noopener">finnhub.io</a> et collez-la ici.
+          Elle reste dans votre navigateur.
+        </p>
+        <label>Clé API Finnhub
+          <input id="api-key" type="password" placeholder="ex. c1ab2cd3…" autocomplete="off" spellcheck="false" />
+        </label>
+        <div class="settings-actions">
+          <button value="demo" class="ghost">Mode démo</button>
+          <button value="cancel" class="ghost">Annuler</button>
+          <button value="save" class="primary">Activer le live</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
