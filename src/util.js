@@ -12,9 +12,22 @@ export const colorScale = d3
 
 export const colorFor = (pct) => colorScale(pct || 0);
 
-const priceFmt = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtCache = {};
+function priceFormatter(currency) {
+  if (!fmtCache[currency]) {
+    const noDecimals = ['JPY', 'KRW', 'TWD'].includes(currency);
+    fmtCache[currency] = new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency,
+      currencyDisplay: 'narrowSymbol',
+      minimumFractionDigits: noDecimals ? 0 : 2,
+      maximumFractionDigits: noDecimals ? 0 : 2,
+    });
+  }
+  return fmtCache[currency];
+}
 
-export const fmtPrice = (p) => (p > 0 ? `${priceFmt.format(p)} $` : '—');
+export const fmtPrice = (p, currency = 'USD') => (p > 0 ? priceFormatter(currency).format(p) : '—');
 export const fmtPct = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2).replace('.', ',')} %`;
 export const arrow = (v) => (v > 0 ? '▲' : v < 0 ? '▼' : '•');
 

@@ -339,6 +339,7 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
       const x = lerp(px, ox, e);
       const y = lerp(py, oy, e);
       const r = Math.max(0, lerp(pr, n.orbR, e) * n.vis * n.s);
+      n.cur = { x, y, r };
 
       n.el.g.setAttribute('transform', `translate(${x.toFixed(2)},${y.toFixed(2)})`);
       n.el.body.setAttribute('r', r.toFixed(2));
@@ -408,5 +409,25 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
   gsap.ticker.add(render);
   intro();
 
-  return { setMode, setFilter, setSelected, setIndex, zoomTo: (id) => zoomTo(id ? domById[id] : null) };
+  // Instantané de l'état affiché (utilisé pour l'image de partage).
+  function snapshot() {
+    return {
+      width: W,
+      height: H,
+      mode: state.mode,
+      core: state.core.s > 0.5 ? { x: W / 2, y: H / 2, r: state.coreR, index: state.index } : null,
+      domains: domains.filter((d) => d.cur && d.cur.r > 1).map((d) => ({ ...d.cur, color: d.color, name: d.name })),
+      nodes: nodes.filter((n) => n.cur && n.cur.r > 0.5).map((n) => ({
+        ...n.cur,
+        ticker: n.co.ticker,
+        name: n.co.name,
+        listed: n.co.listed,
+        pct: n.pct,
+        cap: n.co.cap,
+        color: n.co.listed ? n.el.body.getAttribute('fill') : n.dom.color,
+      })),
+    };
+  }
+
+  return { setMode, setFilter, setSelected, setIndex, snapshot, zoomTo: (id) => zoomTo(id ? domById[id] : null) };
 }

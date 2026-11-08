@@ -1,5 +1,7 @@
 // Univers des entreprises qui construisent l'IA.
-// price = prix de référence (USD, approximatif) utilisé pour le mode démo et avant le 1er tick live.
+// price = prix de référence (devise locale, approximatif) utilisé pour le mode démo et avant le 1er cours réel.
+// symbol = symbole Yahoo Finance (bourses hors US : .PA Paris, .DE Francfort, .T Tokyo, .KS Séoul, .HK Hong Kong…).
+// us    = coté aux États-Unis → éligible au temps réel Finnhub (WebSocket).
 // cap   = capitalisation approximative en milliards USD (sert à la taille des bulles).
 // vol   = volatilité annualisée approximative (sert à la simulation et à la vitesse d'orbite).
 // Les valeurs de référence sont indicatives : en mode LIVE, les prix sont remplacés par les vrais cours.
@@ -15,7 +17,14 @@ export const DOMAINS = [
 ];
 
 const c = (ticker, name, domain, price, cap, vol, country, role) => ({
-  ticker, name, domain, price, cap, vol, country, role, listed: domain !== 'private',
+  ticker, symbol: ticker, currency: 'USD', us: domain !== 'private',
+  name, domain, price, cap, vol, country, role, listed: domain !== 'private',
+});
+
+// Valeur cotée hors des États-Unis (cours via Yahoo Finance, en devise locale).
+const x = (ticker, symbol, currency, name, domain, price, cap, vol, country, role) => ({
+  ticker, symbol, currency, us: false,
+  name, domain, price, cap, vol, country, role, listed: true,
 });
 
 export const COMPANIES = [
@@ -77,7 +86,32 @@ export const COMPANIES = [
   c('ISRG', 'Intuitive Surgical', 'robotics', 540, 195, 0.35, 'US', 'Robots chirurgicaux da Vinci.'),
   c('AAPL', 'Apple', 'robotics', 270, 4000, 0.3, 'US', 'Apple Intelligence et puces Neural Engine embarquées.'),
   c('SYM', 'Symbotic', 'robotics', 60, 35, 0.9, 'US', 'Robotique d’entrepôt pilotée par l’IA.'),
-  c('ABBNY', 'ABB', 'robotics', 70, 130, 0.3, 'CH', 'Robots industriels et automatisation.'),
+  x('ABB', 'ABBN.SW', 'CHF', 'ABB', 'robotics', 55, 130, 0.3, 'CH', 'Robots industriels et automatisation.'),
+
+  // ---------- International ----------
+  x('SMSN', '005930.KS', 'KRW', 'Samsung Electronics', 'chips', 95000, 450, 0.4, 'KR', 'Mémoire HBM et DRAM, fonderie et smartphones Galaxy AI.'),
+  x('HYNIX', '000660.KS', 'KRW', 'SK Hynix', 'chips', 450000, 300, 0.55, 'KR', 'Leader de la mémoire HBM qui équipe les GPU NVIDIA.'),
+  x('TEL', '8035.T', 'JPY', 'Tokyo Electron', 'chips', 30000, 100, 0.45, 'JP', 'Équipements de dépôt et de gravure pour les puces avancées.'),
+  x('ADVNT', '6857.T', 'JPY', 'Advantest', 'chips', 15000, 75, 0.6, 'JP', 'Testeurs de puces, indispensables pour valider les GPU IA.'),
+  x('MDTK', '2454.TW', 'TWD', 'MediaTek', 'chips', 1400, 75, 0.4, 'TW', 'Puces mobiles avec NPU et ASIC IA sur mesure.'),
+  x('IFX', 'IFX.DE', 'EUR', 'Infineon', 'chips', 35, 55, 0.4, 'DE', 'Électronique de puissance pour l’alimentation des datacenters.'),
+  x('ASMI', 'ASM.AS', 'EUR', 'ASM International', 'chips', 500, 28, 0.45, 'NL', 'Dépôt de couches atomiques (ALD) pour les puces de pointe.'),
+  c('STM', 'STMicroelectronics', 'chips', 25, 25, 0.45, 'FR', 'Microcontrôleurs et capteurs pour l’IA embarquée. Franco-italien.'),
+  x('SU', 'SU.PA', 'EUR', 'Schneider Electric', 'infra', 230, 150, 0.3, 'FR', 'Énergie et refroidissement des datacenters IA.'),
+  x('SIE', 'SIE.DE', 'EUR', 'Siemens', 'infra', 230, 210, 0.3, 'DE', 'Automatisation industrielle et IA industrielle.'),
+  x('HTCH', '6501.T', 'JPY', 'Hitachi', 'infra', 4500, 140, 0.35, 'JP', 'Réseaux électriques et infrastructures numériques.'),
+  x('LR', 'LR.PA', 'EUR', 'Legrand', 'infra', 130, 40, 0.3, 'FR', 'Équipements électriques et baies pour datacenters.'),
+  c('BABA', 'Alibaba', 'cloud', 160, 380, 0.5, 'CN', 'Alibaba Cloud et modèles Qwen.'),
+  x('TCEHY', '0700.HK', 'HKD', 'Tencent', 'cloud', 600, 700, 0.4, 'CN', 'Tencent Cloud et modèles Hunyuan.'),
+  c('BIDU', 'Baidu', 'cloud', 120, 40, 0.5, 'CN', 'Modèles Ernie et conduite autonome Apollo.'),
+  x('OVH', 'OVH.PA', 'EUR', 'OVHcloud', 'cloud', 10, 1.7, 0.6, 'FR', 'Cloud souverain européen avec offres GPU.'),
+  x('CAP', 'CAP.PA', 'EUR', 'Capgemini', 'software', 140, 28, 0.35, 'FR', 'Intégration de l’IA générative dans les entreprises.'),
+  x('DSY', 'DSY.PA', 'EUR', 'Dassault Systèmes', 'software', 28, 42, 0.35, 'FR', 'Jumeaux numériques et IA pour l’industrie.'),
+  x('SFTBY', '9984.T', 'JPY', 'SoftBank Group', 'software', 20000, 150, 0.7, 'JP', 'Investisseur massif dans OpenAI, propriétaire d’Arm, projet Stargate.'),
+  c('INFY', 'Infosys', 'software', 18, 75, 0.3, 'IN', 'Services IT et plateforme Topaz d’IA générative.'),
+  x('FANUC', '6954.T', 'JPY', 'Fanuc', 'robotics', 4500, 30, 0.35, 'JP', 'Robots industriels pilotés par l’IA.'),
+  x('KYNC', '6861.T', 'JPY', 'Keyence', 'robotics', 55000, 100, 0.35, 'JP', 'Capteurs et vision industrielle.'),
+  x('XIAOMI', '1810.HK', 'HKD', 'Xiaomi', 'robotics', 45, 150, 0.55, 'CN', 'IA embarquée, véhicules électriques et robotique grand public.'),
 
   // Laboratoires privés (valorisation uniquement, pas de cours)
   c('OPENAI', 'OpenAI', 'private', 0, 500, 0, 'US', 'ChatGPT et les modèles GPT. Valorisation privée.'),

@@ -1,13 +1,14 @@
 import './styles.css';
 import { gsap } from 'gsap';
 import { COMPANIES, DOMAINS } from './data/companies.js';
-import { createFinnhubProvider, createSimProvider, createStore } from './data/feed.js';
+import { apiAvailable, createApiProvider, createFinnhubProvider, createSimProvider, createStore } from './data/feed.js';
 import { createGalaxy } from './viz/galaxy.js';
 import { createTicker } from './ui/ticker.js';
 import { createMovers } from './ui/movers.js';
 import { createPanel, createTooltip } from './ui/panel.js';
 import { createSettings, getApiKey } from './ui/settings.js';
 import { createStars } from './ui/stars.js';
+import { buildCaption, renderShareImage } from './ui/share.js';
 import { colorFor, fmtCap, fmtPct, reducedMotion } from './util.js';
 
 const $ = (id) => document.getElementById(id);
@@ -15,8 +16,14 @@ const store = createStore();
 const listed = COMPANIES.filter((c) => c.listed);
 
 /* ---------- Source de données ---------- */
-let provider = null;
-let lastLiveTick = 0;
+// Ordre de préférence :
+//  1. /api disponible (site déployé sur Vercel) + clé Finnhub → US en temps réel, reste du monde différé
+//  2. /api disponible sans clé → tout en différé (~1 min)
+//  3. clé Finnhub seule → US en temps réel, international aux prix de référence
+//  4. rien → DÉMO simulée
+const providers = [];
+let lastTrade = 0;
+let statusBase = '';
 
 function setStatus(mode, text) {
   $('status').dataset.mode = mode;
@@ -24,35 +31,65 @@ function setStatus(mode, text) {
 }
 
 function startDemo(reason) {
-  provider?.stop();
-  provider = createSimProvider(store);
-  provider.start();
+  const sim = createSimProvider(store);
+  providers.push(sim);
+  sim.start();
   setStatus(reason === 'error' ? 'error' : 'demo', reason === 'error' ? 'Clé invalide · DÉMO simulée' : 'DÉMO · cours simulés');
 }
 
-function startLive(key) {
-  provider?.stop();
-  provider = createFinnhubProvider(store, key, {
-    onStatus: (s) => {
-      if (s === 'loading') setStatus('live', 'LIVE · chargement…');
-      if (s === 'live') setStatus('live', 'LIVE · Finnhub');
-      if (s === 'reconnecting') setStatus('error', 'Reconnexion…');
+async function startFeed() {
+  setStatus('demo', 'Connexion…');
+  const key = getApiKey();
+  const api = await apiAvailable();
+
+  if (!api && !key) return startDemo();
+
+  if (key) {
+    const fh = createFinnhubProvider(store, key, {
+      loadQuotes: !api,
+      onStatus: (s) => {
+        if (s === 'trade') lastTrade = Date.now();
+        if (s === 'live') setStatus('live', statusBase);
+        if (s === 'reconnecting') setStatus('error', 'Reconnexion…');
+      },
+    });
+    statusBase = api ? 'LIVE · temps réel US + monde' : 'LIVE · temps réel US';
+    try {
+      await fh.start();
+      providers.push(fh);
+    } catch {
+      if (!api) return startDemo('error');
+      // Clé refusée mais /api disponible : on continue en différé.
+    }
+    if (api) {
+      const usSymbols = new Set(fh.universe.map((c) => c.ticker));
+      // Instantané initial des valeurs US (clôture veille + historique de séance)…
+      createApiProvider(store, { companies: fh.universe, once: true, src: 'rt' }).start();
+      // …puis rafraîchissement du reste du monde chaque minute.
+      const rest = createApiProvider(store, { companies: listed.filter((c) => !usSymbols.has(c.ticker)) });
+      providers.push(rest);
+      rest.start();
+    }
+    return;
+  }
+
+  // /api sans clé : tout en différé.
+  const all = createApiProvider(store, {
+    onUpdate: (n, total, err) => {
+      if (err) setStatus('error', 'Source indisponible · nouvel essai…');
+      else setStatus('live', `LIVE · différé ~1 min (${n}/${total})`);
     },
   });
-  provider.start().catch(() => startDemo('error'));
+  providers.push(all);
+  await all.start();
 }
 
-function startFeed() {
-  const key = getApiKey();
-  if (key) startLive(key);
-  else startDemo();
-}
-
-// En live, si aucun échange depuis 1 min, le marché US est probablement fermé.
-store.subscribe(() => { if (provider?.mode === 'live') lastLiveTick = Date.now(); });
+// En temps réel, si aucun échange depuis 1 min, le marché US est probablement fermé.
 setInterval(() => {
-  if (provider?.mode === 'live' && $('status').dataset.mode === 'live' && Date.now() - lastLiveTick > 60000) {
-    setStatus('live', 'LIVE · marché calme/fermé');
+  if (statusBase && $('status').dataset.mode === 'live' && lastTrade && Date.now() - lastTrade > 60000) {
+    setStatus('live', 'LIVE · marché US calme/fermé');
+  } else if (statusBase && $('status').dataset.mode === 'live' && Date.now() - lastTrade < 60000) {
+    setStatus('live', statusBase);
   }
 }, 10000);
 
@@ -151,6 +188,7 @@ window.addEventListener('resize', () => placePill(toggle.querySelector('button.a
 
 /* ---------- Statistiques globales ---------- */
 const statShown = { index: 0, cap: 0 };
+let lastStats = { index: 0, cap: 0, up: 0, down: 0 };
 function updateStats() {
   let capNow = 0, weighted = 0, capBase = 0, up = 0, down = 0;
   for (const co of listed) {
@@ -163,6 +201,7 @@ function updateStats() {
     else if (q.changePct < 0) down++;
   }
   const index = weighted / capBase;
+  lastStats = { index, cap: capNow, up, down };
   galaxy.setIndex(index);
   gsap.to(statShown, {
     index,
@@ -183,7 +222,7 @@ updateStats();
 setInterval(updateStats, 1500);
 
 /* ---------- Réglages ---------- */
-const settings = createSettings($('settings'), $('api-key'), { onChange: startFeed });
+const settings = createSettings($('settings'), $('api-key'), { onChange: () => location.reload() });
 $('open-settings').addEventListener('click', settings.open);
 $('status').addEventListener('click', settings.open);
 
@@ -194,3 +233,58 @@ if (!reducedMotion) {
   gsap.from('#chips, .search', { y: 12, opacity: 0, duration: 0.7, stagger: 0.05, delay: 0.4, ease: 'power3.out' });
   gsap.from('.movers, .legend', { y: 30, opacity: 0, duration: 1, delay: 1.2, ease: 'expo.out' });
 }
+
+/* ---------- Partage ---------- */
+const shareDlg = $('share');
+let shareBlob = null; // Promise<Blob>
+
+function currentMovers() {
+  const rows = listed.map((co) => ({ ticker: co.ticker, pct: store.get(co.ticker).changePct })).sort((a, b) => b.pct - a.pct);
+  return { gainers: rows.slice(0, 3), losers: rows.slice(-3).reverse() };
+}
+
+$('open-share').addEventListener('click', async () => {
+  const data = { snapshot: galaxy.snapshot(), stats: lastStats, movers: currentMovers(), sourceLabel: $('status-text').textContent };
+  $('share-preview').textContent = 'Génération…';
+  $('share-caption').value = buildCaption(data);
+  $('share-native').hidden = !navigator.canShare;
+  shareDlg.showModal();
+  const canvas = await renderShareImage(data);
+  // Aperçu immédiat ; l'encodage PNG (plus lent) se fait en arrière-plan.
+  canvas.setAttribute('role', 'img');
+  canvas.setAttribute('aria-label', 'Aperçu de l’image à partager');
+  $('share-preview').replaceChildren(canvas);
+  shareBlob = new Promise((r) => canvas.toBlob(r, 'image/png'));
+  if (!reducedMotion) gsap.from(canvas, { opacity: 0, scale: 0.96, duration: 0.6, ease: 'power3.out' });
+});
+
+const shareFileName = () => `ai-orbit-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.png`;
+
+$('share-download').addEventListener('click', async () => {
+  if (!shareBlob) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(await shareBlob);
+  a.download = shareFileName();
+  a.click();
+});
+
+$('share-copy').addEventListener('click', async (e) => {
+  try {
+    await navigator.clipboard.writeText($('share-caption').value);
+    e.target.textContent = 'Copié ✓';
+  } catch {
+    $('share-caption').select();
+    e.target.textContent = 'Sélectionné — Ctrl+C';
+  }
+  setTimeout(() => { e.target.textContent = 'Copier la légende'; }, 2000);
+});
+
+$('share-native').addEventListener('click', async () => {
+  if (!shareBlob) return;
+  const file = new File([await shareBlob], shareFileName(), { type: 'image/png' });
+  const payload = { files: [file], title: 'AI·ORBIT', text: $('share-caption').value };
+  try {
+    if (navigator.canShare?.(payload)) await navigator.share(payload);
+    else await navigator.share({ title: 'AI·ORBIT', text: $('share-caption').value, url: location.href });
+  } catch { /* partage annulé */ }
+});

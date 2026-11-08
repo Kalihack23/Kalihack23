@@ -41,6 +41,10 @@
           <button role="tab" data-view="orbit" aria-selected="false">Orbites</button>
           <span class="view-toggle-pill" aria-hidden="true"></span>
         </div>
+        <button class="share-btn" id="open-share" type="button" aria-label="Partager une image">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" /></svg>
+          <span>Partager</span>
+        </button>
         <button class="icon-btn" id="open-settings" type="button" aria-label="Réglages">
           <svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm8.94-2.06-.06-2.88 2-1.62-2-3.46-2.44.88-2.5-1.44L15.5 2.5h-4l-.44 2.42-2.5 1.44-2.44-.88-2 3.46 2 1.62v2.88l-2 1.62 2 3.46 2.44-.88 2.5 1.44.44 2.42h4l.44-2.42 2.5-1.44 2.44.88 2-3.46-2-1.62Z" /></svg>
         </button>
@@ -81,14 +85,30 @@
       <div id="panel-body"></div>
     </aside>
 
+    <dialog class="settings share" id="share">
+      <form method="dialog">
+        <h2>Partager avec tes abonnés</h2>
+        <div class="share-preview" id="share-preview"></div>
+        <label>Légende prête à poster
+          <textarea id="share-caption" rows="6" readonly></textarea>
+        </label>
+        <div class="settings-actions">
+          <button value="close" class="ghost">Fermer</button>
+          <button type="button" class="ghost" id="share-copy">Copier la légende</button>
+          <button type="button" class="ghost" id="share-download">Télécharger l’image</button>
+          <button type="button" class="primary" id="share-native">Partager…</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog class="settings" id="settings">
       <form method="dialog">
         <h2>Source des données</h2>
         <p>
-          Sans clé, le site tourne en <b>mode démo</b> avec des variations simulées (ce ne sont pas de vrais cours).
-          Pour les <b>vrais cours en temps réel</b>, créez une clé gratuite sur
-          <a href="https://finnhub.io/register" target="_blank" rel="noopener">finnhub.io</a> et collez-la ici.
-          Elle reste dans votre navigateur.
+          Une fois le site déployé (Vercel), les cours de toutes les bourses s’affichent en <b>différé d’environ 1 minute</b>, sans clé.
+          Pour le <b>temps réel sur les valeurs américaines</b>, créez une clé gratuite sur
+          <a href="https://finnhub.io/register" target="_blank" rel="noopener">finnhub.io</a> et collez-la ici
+          (elle reste dans votre navigateur). Sans aucune source, le site passe en <b>mode démo</b> avec des cours simulés.
         </p>
         <label>Clé API Finnhub
           <input id="api-key" type="password" placeholder="ex. c1ab2cd3…" autocomplete="off" spellcheck="false" />

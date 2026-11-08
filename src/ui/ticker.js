@@ -22,7 +22,7 @@ export function createTicker(el, store, { onSelect } = {}) {
     const nodes = items.get(q.ticker);
     if (!nodes) return;
     for (const node of nodes) {
-      node.children[1].textContent = fmtPrice(q.price);
+      node.children[1].textContent = fmtPrice(q.price, q.currency);
       const pct = node.children[2];
       pct.textContent = `${arrow(q.changePct)} ${fmtPct(q.changePct)}`;
       pct.style.color = colorFor(q.changePct * 2);

@@ -1,4 +1,7 @@
-// Flux de cotations : un store commun + deux fournisseurs (LIVE Finnhub / DÉMO simulée).
+// Flux de cotations : un store commun + trois fournisseurs
+//  - API  : /api/quotes (fonction Vercel → Yahoo Finance), toutes bourses, rafraîchi chaque minute (différé)
+//  - Finnhub : WebSocket temps réel pour les valeurs cotées aux États-Unis (clé gratuite)
+//  - DÉMO : simulation, quand aucune source réelle n'est disponible
 import { COMPANIES } from './companies.js';
 
 const HISTORY_MAX = 120;
@@ -17,18 +20,21 @@ export function createStore() {
   for (const co of COMPANIES) {
     quotes.set(co.ticker, {
       ticker: co.ticker,
+      currency: co.currency,
       price: co.price,
       prevClose: co.price,
       changePct: 0,
       history: [],
       lastTs: 0,
       dir: 0,
+      src: null, // 'rt' temps réel | 'api' différé | 'sim' simulé | null référence
     });
   }
 
-  function set(ticker, price, prevClose, ts = Date.now()) {
+  function set(ticker, price, prevClose, ts = Date.now(), src = null) {
     const q = quotes.get(ticker);
     if (!q || !Number.isFinite(price) || price <= 0) return;
+    if (src) q.src = src;
     if (Number.isFinite(prevClose) && prevClose > 0) q.prevClose = prevClose;
     q.dir = Math.sign(price - q.price);
     q.price = price;
@@ -62,7 +68,6 @@ export function createSimProvider(store) {
   const sectorDrift = {};
   let timer = null;
 
-  // État initial : une séance déjà entamée, avec historique synthétique.
   for (const co of listed) {
     const dailySigma = co.vol / Math.sqrt(252);
     const prevClose = co.price;
@@ -73,28 +78,21 @@ export function createSimProvider(store) {
       hist.push(p);
     }
     store.seedHistory(co.ticker, hist);
-    store.set(co.ticker, p, prevClose);
+    store.set(co.ticker, p, prevClose, Date.now(), 'sim');
   }
 
   function tick() {
-    // Facteur commun au marché + facteur sectoriel + bruit propre à chaque valeur.
+    timer = setTimeout(tick, 900 + Math.random() * 700);
     const market = gauss() * 0.0009;
-    for (const co of listed) {
-      if (!(co.domain in sectorDrift)) sectorDrift[co.domain] = 0;
-    }
+    for (const co of listed) if (!(co.domain in sectorDrift)) sectorDrift[co.domain] = 0;
     for (const k in sectorDrift) sectorDrift[k] = sectorDrift[k] * 0.9 + gauss() * 0.0008;
-
-    // On ne met à jour qu'une partie des valeurs à chaque tick : plus naturel visuellement.
     for (const co of listed) {
       if (Math.random() > 0.45) continue;
       const q = store.get(co.ticker);
       const sigma = (co.vol / Math.sqrt(252)) * 0.09;
-      // Légère force de rappel pour éviter que la séance ne dérive à l'infini.
       const meanRevert = -((q.price - q.prevClose) / q.prevClose) * 0.01;
-      const r = market + sectorDrift[co.domain] + gauss() * sigma + meanRevert;
-      store.set(co.ticker, q.price * (1 + r));
+      store.set(co.ticker, q.price * (1 + market + sectorDrift[co.domain] + gauss() * sigma + meanRevert), undefined, Date.now(), 'sim');
     }
-    timer = setTimeout(tick, 900 + Math.random() * 700);
   }
 
   return {
@@ -104,9 +102,61 @@ export function createSimProvider(store) {
   };
 }
 
-/* ---------- Fournisseur LIVE : Finnhub (REST pour la clôture veille + WebSocket pour les trades) ---------- */
-export function createFinnhubProvider(store, apiKey, { onStatus } = {}) {
-  const listed = COMPANIES.filter((c) => c.listed);
+/* ---------- Fournisseur API : /api/quotes (Yahoo Finance via la fonction serveur) ---------- */
+export async function apiAvailable() {
+  try {
+    const res = await fetch('/api/quotes?symbols=NVDA', { cache: 'no-store' });
+    if (!res.ok) return false;
+    const json = await res.json();
+    return !!json?.quotes?.NVDA?.price;
+  } catch {
+    return false;
+  }
+}
+
+export function createApiProvider(store, { companies, intervalMs = 60000, once = false, src = 'api', onUpdate } = {}) {
+  const list = (companies || COMPANIES.filter((c) => c.listed));
+  const bySymbol = Object.fromEntries(list.map((c) => [c.symbol, c]));
+  let timer = null;
+  let first = true;
+
+  async function poll() {
+    if (!once) timer = setTimeout(poll, intervalMs);
+    try {
+      const res = await fetch(`/api/quotes?symbols=${list.map((c) => encodeURIComponent(c.symbol)).join(',')}`);
+      if (!res.ok) throw new Error(res.status);
+      const { quotes } = await res.json();
+      let n = 0;
+      for (const sym in quotes) {
+        const co = bySymbol[sym];
+        const q = quotes[sym];
+        if (!co) continue;
+        if (first && q.intraday?.length > 1) store.seedHistory(co.ticker, q.intraday);
+        store.set(co.ticker, q.price, q.prevClose, q.time, src);
+        n++;
+      }
+      first = false;
+      onUpdate?.(n, list.length);
+    } catch (e) {
+      onUpdate?.(0, list.length, e);
+    }
+  }
+
+  return {
+    mode: 'api',
+    start() { return poll(); },
+    stop() { clearTimeout(timer); },
+  };
+}
+
+/* ---------- Fournisseur Finnhub : WebSocket temps réel (valeurs US) ---------- */
+// Le plan gratuit limite le WebSocket à 50 symboles : on garde les 50 plus grosses capitalisations US.
+export function finnhubUniverse() {
+  return COMPANIES.filter((c) => c.us).sort((a, b) => b.cap - a.cap).slice(0, 50);
+}
+
+export function createFinnhubProvider(store, apiKey, { onStatus, loadQuotes = true } = {}) {
+  const list = finnhubUniverse();
   let ws = null;
   let stopped = false;
   let retry = 0;
@@ -120,24 +170,21 @@ export function createFinnhubProvider(store, apiKey, { onStatus } = {}) {
     return res.json(); // { c, d, dp, h, l, o, pc, t }
   }
 
-  async function loadQuotes() {
-    // Plan gratuit : 60 requêtes/min → on espace les appels.
-    let ok = 0;
-    for (const co of listed) {
-      if (stopped) return ok;
+  // Sans /api : clôture de la veille via REST, espacée (60 requêtes/min sur le plan gratuit).
+  async function loadAll() {
+    for (const co of list) {
+      if (stopped) return;
       try {
-        const q = await fetchQuote(co.ticker);
+        const q = await fetchQuote(co.symbol);
         if (q && q.c > 0) {
           store.seedHistory(co.ticker, [q.pc || q.c, q.o || q.c, q.c]);
-          store.set(co.ticker, q.c, q.pc, (q.t || 0) * 1000 || Date.now());
-          ok++;
+          store.set(co.ticker, q.c, q.pc, (q.t || 0) * 1000 || Date.now(), 'rt');
         }
       } catch (e) {
         if (e.message === 'auth') throw e;
       }
       await new Promise((r) => setTimeout(r, 1100));
     }
-    return ok;
   }
 
   function connect() {
@@ -146,16 +193,19 @@ export function createFinnhubProvider(store, apiKey, { onStatus } = {}) {
     ws.addEventListener('open', () => {
       retry = 0;
       onStatus?.('live');
-      for (const co of listed) ws.send(JSON.stringify({ type: 'subscribe', symbol: co.ticker }));
+      for (const co of list) ws.send(JSON.stringify({ type: 'subscribe', symbol: co.symbol }));
     });
     ws.addEventListener('message', (ev) => {
       let msg;
       try { msg = JSON.parse(ev.data); } catch { return; }
       if (msg.type !== 'trade' || !Array.isArray(msg.data)) return;
-      // Plusieurs trades par message : on garde le dernier par symbole.
       const last = {};
       for (const t of msg.data) last[t.s] = t;
-      for (const s in last) store.set(s, last[s].p, undefined, last[s].t);
+      for (const s in last) {
+        const co = list.find((c) => c.symbol === s);
+        if (co) store.set(co.ticker, last[s].p, undefined, last[s].t, 'rt');
+      }
+      onStatus?.('trade');
     });
     ws.addEventListener('close', () => {
       if (stopped) return;
@@ -167,17 +217,19 @@ export function createFinnhubProvider(store, apiKey, { onStatus } = {}) {
 
   return {
     mode: 'live',
+    universe: list,
     async start() {
-      onStatus?.('loading');
-      // Le WebSocket démarre tout de suite ; les clôtures de la veille arrivent progressivement.
-      connect();
+      // Vérifie la clé avant d'ouvrir le WebSocket.
       try {
-        await loadQuotes();
+        await fetchQuote('AAPL');
       } catch (e) {
-        onStatus?.('auth-error');
-        this.stop();
-        throw e;
+        if (e.message === 'auth') {
+          onStatus?.('auth-error');
+          throw e;
+        }
       }
+      connect();
+      if (loadQuotes) await loadAll();
     },
     stop() {
       stopped = true;
