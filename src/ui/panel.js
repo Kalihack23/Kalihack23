@@ -2,7 +2,7 @@
 import { gsap } from 'gsap';
 import { domainById } from '../data/companies.js';
 import { sparklineSVG } from '../viz/sparkline.js';
-import { renderHistoryChart } from '../viz/historyChart.js';
+import { renderHistoryChart, scrubLabel } from '../viz/historyChart.js';
 import { fetchHistory, fetchNews } from '../data/history.js';
 import { createSegmented } from './glass.js';
 import { arrow, colorFor, fmtCap, fmtPct, fmtPrice, reducedMotion } from '../util.js';
@@ -66,12 +66,13 @@ const srcBadge = (q) => {
   return `<span class="p-src ${cls}"><i></i>${txt}</span>`;
 };
 
+// Périodes, avec les libellés de l'app Bourse.
 const RANGES = [
-  ['live', 'Séance'],
-  ['5d', '5 J'],
-  ['1mo', '1 M'],
-  ['6mo', '6 M'],
-  ['1y', '1 A'],
+  ['live', '1J', 'Aujourd’hui'],
+  ['5d', '1S', 'Sur 1 semaine'],
+  ['1mo', '1M', 'Sur 1 mois'],
+  ['6mo', '6M', 'Sur 6 mois'],
+  ['1y', '1A', 'Sur 1 an'],
 ];
 
 const rel = new Intl.RelativeTimeFormat('fr', { numeric: 'auto' });
@@ -82,36 +83,56 @@ function ago(t) {
   return rel.format(Math.round(s / 86400), 'day');
 }
 const esc = (str) => String(str ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+const numFmt = (v, cur) => fmtPrice(v, cur).replace(/\s?[^\d\s,. -]+$/u, '').trim();
+const signed = (v, cur) => `${v >= 0 ? '+' : '−'}${numFmt(Math.abs(v), cur)}`;
+const EXCHANGES = { PA: 'Euronext Paris', AS: 'Euronext Amsterdam', DE: 'Xetra', SW: 'SIX Suisse', T: 'Bourse de Tokyo', KS: 'KRX Séoul', HK: 'HKEX', TW: 'TWSE Taïwan' };
+const UP = '#30d158';
+const DOWN = '#ff453a';
 
 export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
   let current = null;
   let range = 'live';
   let reqId = 0;
+  let scrubbing = false;
+  let period = null; // { first, last, ref, label } pour la période affichée
   const shown = { price: 0 };
+
+  function stat(label, value, id = '') {
+    return `<div class="p-stat"><span>${label}</span><b${id ? ` id="${id}"` : ''}>${value}</b></div>`;
+  }
+
+  function sessionHiLo(q) {
+    const h = q.history.length ? q.history : [q.price];
+    return [Math.max(...h, q.price), Math.min(...h, q.price)];
+  }
 
   function render(co) {
     const dom = domainById[co.domain];
     const q = store.get(co.ticker);
     const listed = co.listed;
-    const c = listed ? colorFor(q.changePct) : dom.color;
+    const [hi, lo] = sessionHiLo(q);
     body.innerHTML = `
-      <span class="p-domain"><i style="background:${dom.color};box-shadow:0 0 8px ${dom.color}"></i>${dom.name}</span>
-      <h2 class="p-title">${esc(co.name)}</h2>
-      <div class="p-ticker">${listed ? `${co.ticker}${co.symbol !== co.ticker ? ` · ${co.symbol}` : ''}` : 'Non coté'} · ${COUNTRY[co.country] || co.country}${listed ? ` · ${co.currency}` : ''}</div>
-      <div class="p-price" id="p-price">${listed ? fmtPrice(q.price, q.currency) : fmtCap(co.cap)}</div>
-      <div class="p-change" id="p-change" style="color:${c}">${listed ? `${arrow(q.changePct)} ${fmtPct(q.changePct)} aujourd’hui` : 'Valorisation privée estimée'}</div>
-      ${listed ? `<div id="p-src">${srcBadge(q)}</div>
-      <div class="p-tabs glass" id="p-tabs"></div>
-      <div class="p-chart" id="p-chart"></div>
-      <div class="p-perf" id="p-perf"></div>` : ''}
-      <p class="p-role">${esc(co.role)}</p>
-      <div class="p-grid">
-        ${listed ? `<div class="p-cell"><span>Clôture veille</span><b id="p-prev">${fmtPrice(q.prevClose, q.currency)}</b></div>` : ''}
-        <div class="p-cell"><span>${listed ? 'Capitalisation' : 'Valorisation'}</span><b id="p-cap">${fmtCap(listed ? co.cap * (q.price / q.prevClose) : co.cap)}</b></div>
-        ${listed ? `<div class="p-cell"><span>Volatilité (an.)</span><b>${Math.round(co.vol * 100)} %</b></div>` : ''}
-        <div class="p-cell"><span>Domaine</span><b style="color:${dom.color}">${dom.short}</b></div>
+      <header class="p-head">
+        <h2 class="p-symbol">${listed ? esc(co.ticker) : esc(co.name)}</h2>
+        <div class="p-name">${listed ? `${esc(co.name)} · ` : ''}<span style="color:${dom.color}">${dom.short}</span></div>
+      </header>
+      <div class="p-quote">
+        <div class="p-price-row"><span class="p-price" id="p-price">${listed ? numFmt(q.price, q.currency) : fmtCap(co.cap)}</span>${listed ? `<span class="p-cur">${co.currency}</span>` : ''}</div>
+        ${listed ? `<div class="p-change" id="p-change"></div>
+        <div class="p-when"><span id="p-when">Aujourd’hui</span> · <span id="p-src">${srcBadge(q)}</span></div>` : '<div class="p-when">Valorisation privée estimée · non coté</div>'}
       </div>
-      <section class="p-news">
+      ${listed ? `<div class="p-tabs glass" id="p-tabs"></div>
+      <div class="p-chart" id="p-chart"></div>
+      <div class="p-sim" id="p-sim"></div>
+      <div class="p-stats">
+        <div>${stat('Clôture veille', numFmt(q.prevClose, q.currency), 'p-prev')}${stat('Haut séance', numFmt(hi, q.currency), 'p-hi')}${stat('Bas séance', numFmt(lo, q.currency), 'p-lo')}${stat('Devise', co.currency)}</div>
+        <div>${stat('Cap. boursière', fmtCap(co.cap * (q.price / q.prevClose)), 'p-cap')}${stat('Volatilité (an.)', `${Math.round(co.vol * 100)} %`)}${stat('Pays', COUNTRY[co.country] || co.country)}${stat('Place', co.us ? 'NYSE / Nasdaq' : (EXCHANGES[co.symbol.split('.')[1]] || '—'))}</div>
+      </div>` : `<div class="p-stats single"><div>${stat('Valorisation', fmtCap(co.cap))}${stat('Pays', COUNTRY[co.country] || co.country)}${stat('Domaine', dom.short)}</div></div>`}
+      <section class="p-section">
+        <h3>À propos</h3>
+        <p class="p-role">${esc(co.role)}</p>
+      </section>
+      <section class="p-section p-news">
         <h3>Actualités</h3>
         <ul id="p-news"><li class="p-empty">Chargement…</li></ul>
       </section>
@@ -134,16 +155,58 @@ export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
     loadNews(co);
   }
 
+  // En-tête : prix, variation (valeur et %) et libellé de période / date survolée.
+  function paintHeader({ price, ref, label, animate = false }) {
+    const q = store.get(current.ticker);
+    const priceEl = body.querySelector('#p-price');
+    const chEl = body.querySelector('#p-change');
+    const whenEl = body.querySelector('#p-when');
+    if (!priceEl || !chEl) return;
+    const diff = price - ref;
+    const pct = (diff / ref) * 100;
+    if (animate && !reducedMotion) {
+      gsap.to(shown, {
+        price,
+        duration: 0.8,
+        ease: 'power2.out',
+        overwrite: true,
+        onUpdate: () => { priceEl.textContent = numFmt(shown.price, q.currency); },
+      });
+    } else {
+      gsap.killTweensOf(shown);
+      shown.price = price;
+      priceEl.textContent = numFmt(price, q.currency);
+    }
+    chEl.textContent = `${signed(diff, q.currency)} (${fmtPct(pct)})`;
+    chEl.style.color = diff >= 0 ? UP : DOWN;
+    whenEl.textContent = label;
+  }
+
+  function restoreHeader(animate = false) {
+    if (!current || !period) return;
+    const q = store.get(current.ticker);
+    const price = range === 'live' ? q.price : period.last;
+    paintHeader({ price, ref: period.ref, label: period.label, animate });
+  }
+
   async function drawChart(animate) {
     const co = current;
     const chart = body.querySelector('#p-chart');
-    const perf = body.querySelector('#p-perf');
+    const simEl = body.querySelector('#p-sim');
     if (!co || !chart) return;
     const q = store.get(co.ticker);
+    const label = RANGES.find((r) => r[0] === range)[2];
+    const onScrub = (pt) => {
+      scrubbing = !!pt;
+      if (!pt) return restoreHeader();
+      paintHeader({ price: pt.price, ref: period.ref, label: scrubLabel(pt.t, range === 'live' ? 'live' : range === '5d' ? 'intraday' : 'day') });
+    };
     if (range === 'live') {
       const pts = q.history.map((p, i) => [i, p]);
-      renderHistoryChart(chart, pts, { color: colorFor(q.changePct), currency: q.currency, baseline: q.prevClose, mode: 'live', animate });
-      perf.textContent = '';
+      const r = renderHistoryChart(chart, pts, { currency: q.currency, baseline: q.prevClose, mode: 'live', range, animate, onScrub });
+      period = { ...r, ref: q.prevClose, label };
+      simEl.textContent = '';
+      if (!scrubbing) restoreHeader();
       return;
     }
     const id = ++reqId;
@@ -151,13 +214,10 @@ export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
     const data = await fetchHistory(co, range, q.price);
     if (id !== reqId || current !== co) return;
     chart.classList.remove('loading');
-    const pts = data.points;
-    const first = pts[0][1];
-    const last = pts[pts.length - 1][1];
-    const pct = ((last - first) / first) * 100;
-    renderHistoryChart(chart, pts, { color: colorFor(pct / 3), currency: data.currency || q.currency, mode: range === '5d' ? 'intraday' : 'day', animate });
-    const label = RANGES.find((r) => r[0] === range)[1];
-    perf.innerHTML = `Sur ${label.replace(' ', ' ')} : <b style="color:${colorFor(pct / 3)}">${arrow(pct)} ${fmtPct(pct)}</b>${data.simulated ? ' <span class="p-sim">· historique simulé (démo)</span>' : ''}`;
+    const r = renderHistoryChart(chart, data.points, { currency: data.currency || q.currency, mode: range === '5d' ? 'intraday' : 'day', range, animate, onScrub });
+    period = { ...r, ref: r.first, label };
+    simEl.textContent = data.simulated ? 'Historique simulé (démo)' : '';
+    restoreHeader(true);
   }
 
   async function loadNews(co) {
@@ -171,40 +231,37 @@ export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
       }
       ul.innerHTML = items.slice(0, 5).map((n) => `
         <li><a href="${esc(n.link)}" target="_blank" rel="noopener noreferrer">
-          ${n.thumb ? `<img src="${esc(n.thumb)}" alt="" loading="lazy" />` : '<span class="p-news-dot"></span>'}
-          <span><b>${esc(n.title)}</b><small>${esc(n.publisher)} · ${ago(n.time)}</small></span>
+          <span class="p-news-text"><small class="p-news-src">${esc(n.publisher)}</small><b>${esc(n.title)}</b><small>${ago(n.time)}</small></span>
+          ${n.thumb ? `<img src="${esc(n.thumb)}" alt="" loading="lazy" />` : ''}
         </a></li>`).join('');
-      if (!reducedMotion) gsap.from(ul.children, { opacity: 0, x: 16, stagger: 0.06, duration: 0.5, ease: 'power3.out' });
+      if (!reducedMotion) gsap.from(ul.children, { opacity: 0, y: 10, stagger: 0.05, duration: 0.5, ease: 'power3.out' });
     } catch {
       if (current === co) ul.innerHTML = '<li class="p-empty">Les actualités s’affichent une fois le site déployé (Vercel).</li>';
     }
   }
 
   function update(q) {
-    const priceEl = body.querySelector('#p-price');
-    if (!priceEl) return;
-    const c = colorFor(q.changePct);
-    gsap.to(shown, {
-      price: q.price,
-      duration: reducedMotion ? 0 : 0.8,
-      ease: 'power2.out',
-      overwrite: true,
-      onUpdate: () => { priceEl.textContent = fmtPrice(shown.price, q.currency); },
-    });
-    const chEl = body.querySelector('#p-change');
-    chEl.textContent = `${arrow(q.changePct)} ${fmtPct(q.changePct)} aujourd’hui`;
-    chEl.style.color = c;
+    if (!body.querySelector('#p-price')) return;
+    const [hi, lo] = sessionHiLo(q);
     body.querySelector('#p-src').innerHTML = srcBadge(q);
-    body.querySelector('#p-prev').textContent = fmtPrice(q.prevClose, q.currency);
+    body.querySelector('#p-prev').textContent = numFmt(q.prevClose, q.currency);
+    body.querySelector('#p-hi').textContent = numFmt(hi, q.currency);
+    body.querySelector('#p-lo').textContent = numFmt(lo, q.currency);
     body.querySelector('#p-cap').textContent = fmtCap(current.cap * (q.price / q.prevClose));
-    if (range === 'live') drawChart(false);
+    // Pendant le scrubbing, on ne touche ni à la courbe ni à l'en-tête.
+    if (range === 'live' && !scrubbing) {
+      drawChart(false);
+      paintHeader({ price: q.price, ref: q.prevClose, label: RANGES[0][2], animate: true });
+    }
   }
 
   function open(co) {
     current = co;
+    scrubbing = false;
     render(co);
     el.classList.add('open');
     el.setAttribute('aria-hidden', 'false');
+    el.scrollTop = 0;
     if (!reducedMotion) {
       gsap.fromTo(body.children, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.04, ease: 'power3.out', delay: 0.1 });
     }

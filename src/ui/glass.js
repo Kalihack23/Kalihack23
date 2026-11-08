@@ -5,7 +5,7 @@
 import { gsap } from 'gsap';
 import { reducedMotion } from '../util.js';
 
-const PRESSABLE = 'button, .chip, .seg-item, .tape-item, .movers li';
+const PRESSABLE = 'button, .chip, .seg-item, .tape-item';
 
 export function initGlass() {
   // Reflet spéculaire : position du pointeur en variables CSS sur la surface survolée.
@@ -40,7 +40,7 @@ export function initGlass() {
 /**
  * Contrôle segmenté en verre liquide.
  * @param {HTMLElement} el conteneur (vidé puis rempli)
- * @param {{ items: {id: string, label: string}[], value: string, onChange: (id: string) => void, label?: string }} opts
+ * @param {{ items: {id: string, label: string, className?: string}[], value: string, onChange: (id: string) => void, label?: string }} opts
  */
 export function createSegmented(el, { items, value, onChange, label }) {
   el.classList.add('seg');
@@ -55,7 +55,7 @@ export function createSegmented(el, { items, value, onChange, label }) {
   const buttons = items.map((it) => {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'seg-item';
+    b.className = `seg-item${it.className ? ` ${it.className}` : ''}`;
     b.setAttribute('role', 'tab');
     b.dataset.id = it.id;
     b.textContent = it.label;

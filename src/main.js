@@ -4,7 +4,7 @@ import { COMPANIES, DOMAINS } from './data/companies.js';
 import { apiAvailable, createApiProvider, createFinnhubProvider, createSimProvider, createStore } from './data/feed.js';
 import { createGalaxy } from './viz/galaxy.js';
 import { createTicker } from './ui/ticker.js';
-import { createMovers } from './ui/movers.js';
+import { createWatchlist } from './ui/watchlist.js';
 import { createPanel, createTooltip } from './ui/panel.js';
 import { createSettings, getApiKey } from './ui/settings.js';
 import { createAmbient } from './ui/ambient.js';
@@ -107,12 +107,16 @@ if (/Chrome\//.test(navigator.userAgent) && !/Edg\/|OPR\//.test(navigator.userAg
 const tooltip = createTooltip($('tooltip'), store);
 let galaxy;
 const panel = createPanel($('panel'), $('panel-body'), $('panel-close'), store, {
-  onClose: () => galaxy?.setSelected(null),
+  onClose: () => {
+    galaxy?.setSelected(null);
+    watchlist?.setSelected(null);
+  },
 });
 
 function select(co) {
   tooltip.hide();
   galaxy.setSelected(co.ticker);
+  watchlist?.setSelected(co.ticker);
   panel.open(co);
 }
 
@@ -124,7 +128,7 @@ galaxy = createGalaxy($('viz'), store, {
 });
 
 createTicker($('tape'), store, { onSelect: select });
-createMovers($('gainers'), $('losers'), store, { onSelect: select });
+const watchlist = createWatchlist($('watchlist'), store, { onSelect: select });
 
 /* ---------- Filtres ---------- */
 const active = new Set(DOMAINS.map((d) => d.id));
@@ -158,6 +162,7 @@ function refreshChips() {
 const search = $('search');
 function applyFilter() {
   galaxy.setFilter({ activeDomains: active, query: search.value });
+  watchlist.setFilter({ activeDomains: active, query: search.value });
 }
 search.addEventListener('input', applyFilter);
 search.addEventListener('keydown', (e) => {
@@ -169,6 +174,7 @@ search.addEventListener('keydown', (e) => {
 });
 
 /* ---------- Vues : Galaxie · Bulles · Orbites ---------- */
+document.body.dataset.view = 'pack';
 const HINTS = {
   pack: 'Attrapez et lancez les bulles · cliquez sur un domaine pour zoomer',
   bubbles: 'Taille = variation du jour · attrapez, lancez, faites-les rebondir',
@@ -181,8 +187,11 @@ createSegmented($('view-seg'), {
     { id: 'pack', label: 'Galaxie' },
     { id: 'bubbles', label: 'Bulles' },
     { id: 'orbit', label: 'Orbites' },
+    { id: 'list', label: 'Liste', className: 'mobile-only' },
   ],
   onChange: (mode) => {
+    document.body.dataset.view = mode;
+    if (mode === 'list') return; // mobile : la liste de valeurs remplace la scène
     galaxy.setMode(mode);
     const hint = $('hint');
     gsap.to(hint, {
@@ -241,7 +250,7 @@ if (!reducedMotion) {
   gsap.from('.topbar', { y: -40, opacity: 0, duration: 1, ease: 'expo.out' });
   gsap.from('.tape', { opacity: 0, duration: 1, delay: 0.3 });
   gsap.from('#chips, .search, #view-seg', { y: 12, opacity: 0, duration: 0.7, stagger: 0.05, delay: 0.4, ease: 'power3.out' });
-  gsap.from('.movers, .legend', { y: 30, opacity: 0, duration: 1, delay: 1.2, ease: 'expo.out' });
+  gsap.from('.watchlist, .legend', { y: 30, opacity: 0, duration: 1, delay: 1.2, ease: 'expo.out' });
 }
 
 /* ---------- Partage ---------- */

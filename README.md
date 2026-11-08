@@ -21,7 +21,8 @@ Un site interactif qui regroupe les entreprises qui construisent l’intelligenc
 - **Vue Orbites** : un système solaire avec l’« IA » au centre. Les trois vues animent les mêmes bulles grâce à une simulation physique continue (d3-force).
 - **Design Apple** : un thème graphite et des couleurs système Apple. Les surfaces sont en **« Liquid Glass »** : verre dépoli, liseré lumineux, reflet qui suit le pointeur. Le contrôle segmenté a une lentille de verre qui coulisse avec un ressort, s’étire selon la vitesse et se tire au doigt. Les boutons ont un rebond élastique, et la fiche détaillée est une feuille de verre flottante (*bottom sheet* sur mobile).
 - **Motion design** : une onde à chaque nouveau cours, des couleurs et des compteurs animés, un classement des hausses et baisses qui se réordonne en glissant, un fond d’ambiance lumineux.
-- **Fiche entreprise** : prix en direct (dans sa devise), source du cours, **historique interactif** (séance, 5 jours, 1 mois, 6 mois, 1 an) avec réticule, et **actualités récentes**.
+- **Liste de valeurs façon app Bourse d’Apple** : symbole, nom, mini-courbe de séance, et **pastille verte ou rouge**. Toucher une pastille fait passer l’affichage de la variation au prix, puis à la capitalisation. Tri par variation, capitalisation ou A–Z, avec une animation de réordonnancement. Sur mobile, c’est l’onglet « Liste ».
+- **Fiche entreprise façon app Bourse** : symbole, prix dans sa devise, variation en valeur et en %, périodes **1J · 1S · 1M · 6M · 1A**. Le graphique a une échelle à droite, un quadrillage léger et la clôture de la veille en pointillés. **En parcourant la courbe au doigt, le prix, la variation et la date de l’en-tête se mettent à jour**. Suivent un tableau de statistiques (clôture veille, haut et bas de séance, capitalisation, volatilité, place de cotation…), une section « À propos » et les **actualités**.
 - **Partager** : génère une **image 1080×1350** (format Instagram, TikTok ou X) du tableau de bord, avec l’indice IA et le top 3 des hausses et des baisses. Une **légende est prête à poster**. Sur mobile, le bouton ouvre le partage natif.
 - Filtres par domaine, recherche (Entrée ouvre la fiche), version mobile, `prefers-reduced-motion`.
 
@@ -68,8 +69,9 @@ src/
   data/history.js     historique et actualités
   viz/galaxy.js       visualisation D3 + GSAP (Galaxie ⇄ Orbites)
   viz/sparkline.js    mini-graphiques
-  viz/historyChart.js graphique d’historique interactif
+  viz/historyChart.js graphique façon app Bourse (scrubbing) + mini-courbes
   ui/glass.js         composants Liquid Glass (contrôle segmenté, reflets, ressorts)
+  ui/watchlist.js     liste de valeurs façon app Bourse
   ui/                 bandeau, panneau, infobulle, classement, réglages, ambiance, partage
   main.js             assemblage
 ```

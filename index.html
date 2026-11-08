@@ -70,19 +70,13 @@
     </nav>
 
     <main class="stage" id="stage">
-      <svg id="viz" role="img" aria-label="Carte interactive des entreprises de l’IA"></svg>
-      <p class="hint glass" id="hint">Attrapez et lancez les bulles · cliquez sur un domaine pour zoomer</p>
-
-      <aside class="movers glass" id="movers" aria-label="Plus fortes variations">
-        <h2>En mouvement</h2>
-        <div class="movers-cols">
-          <div><h3 class="up">▲ Hausses</h3><ol id="gainers"></ol></div>
-          <div><h3 class="down">▼ Baisses</h3><ol id="losers"></ol></div>
+      <aside class="watchlist glass" id="watchlist" aria-label="Liste des valeurs"></aside>
+      <div class="canvas">
+        <svg id="viz" role="img" aria-label="Carte interactive des entreprises de l’IA"></svg>
+        <p class="hint glass" id="hint">Attrapez et lancez les bulles · cliquez sur un domaine pour zoomer</p>
+        <div class="legend glass" aria-hidden="true">
+          <span>-3 %</span><i class="legend-bar"></i><span>+3 %</span>
         </div>
-      </aside>
-
-      <div class="legend glass" aria-hidden="true">
-        <span>-3 %</span><i class="legend-bar"></i><span>+3 %</span>
       </div>
     </main>
 
