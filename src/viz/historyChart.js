@@ -4,9 +4,7 @@
 //  - « scrubbing » : on parcourt la courbe au doigt / à la souris ; un callback remonte
 //    le point survolé pour mettre à jour l'en-tête (prix, variation, date), comme sur iOS.
 import * as d3 from 'd3';
-
-const UP = '#30d158';
-const DOWN = '#ff453a';
+import { themeColors } from '../util.js';
 
 const fmt = {
   hour: new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }),
@@ -38,14 +36,15 @@ export function renderHistoryChart(container, points, { currency, baseline, mode
   container.innerHTML = '';
   if (!points || points.length < 2) {
     container.innerHTML = '<p class="p-empty">Pas assez de données pour le moment.</p>';
-    return { color: UP };
+    return { color: themeColors().up };
   }
   const W = 380, H = 210, padT = 10, padB = 24, gutter = 46;
   const plotW = W - gutter;
   const xs = points.map((p) => p[0]);
   const ys = points.map((p) => p[1]);
   const ref = baseline ?? ys[0];
-  const color = ys[ys.length - 1] >= ref ? UP : DOWN;
+  const tc = themeColors();
+  const color = ys[ys.length - 1] >= ref ? tc.up : tc.down;
 
   let lo = Math.min(...ys, baseline ?? Infinity);
   let hi = Math.max(...ys, baseline ?? -Infinity);
@@ -139,10 +138,11 @@ export function miniChartSVG(values, baseline, { width = 64, height = 30 } = {})
   const hi = Math.max(...values, baseline);
   const x = d3.scaleLinear([0, values.length - 1], [1, width - 1]);
   const y = d3.scaleLinear([lo, hi === lo ? lo + 1 : hi], [height - 2, 2]);
-  const color = values[values.length - 1] >= baseline ? UP : DOWN;
+  const tc = themeColors();
+  const color = values[values.length - 1] >= baseline ? tc.up : tc.down;
   const d = d3.line((_, i) => x(i), y).curve(d3.curveMonotoneX)(values);
   return `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" aria-hidden="true">
-    <line x1="0" x2="${width}" y1="${y(baseline).toFixed(1)}" y2="${y(baseline).toFixed(1)}" stroke="rgba(255,255,255,.28)" stroke-dasharray="1.5 2.5"/>
+    <line x1="0" x2="${width}" y1="${y(baseline).toFixed(1)}" y2="${y(baseline).toFixed(1)}" stroke="${tc.baseline}" stroke-dasharray="1.5 2.5"/>
     <path d="${d}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
   </svg>`;
 }

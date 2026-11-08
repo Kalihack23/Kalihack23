@@ -7,6 +7,7 @@ import { COMPANIES, domainById } from '../data/companies.js';
 import { miniChartSVG } from '../viz/historyChart.js';
 import { fmtCap, fmtPct, fmtPrice, reducedMotion } from '../util.js';
 import { createSegmented } from './glass.js';
+import { onThemeChange } from './theme.js';
 
 const PILL_MODES = ['pct', 'price', 'cap'];
 
@@ -129,6 +130,10 @@ export function createWatchlist(el, store, { onSelect } = {}) {
   store.subscribe((q) => {
     const r = rows.get(q.ticker);
     if (r) paint(r, true);
+  });
+  // Thème changé : mini-courbes redessinées aux nouvelles couleurs.
+  onThemeChange(() => {
+    for (const r of rows.values()) { r.lastSpark = -Infinity; paint(r, false); }
   });
   // Retri périodique par variation (évite que la liste « saute » à chaque cotation).
   setInterval(() => { if (sort === 'change' && !el.matches(':hover')) reorder(true); }, 4000);

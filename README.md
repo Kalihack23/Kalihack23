@@ -24,7 +24,9 @@ Un site interactif qui regroupe les entreprises qui construisent l’intelligenc
 - **Liste de valeurs façon app Bourse d’Apple** : symbole, nom, mini-courbe de séance, et **pastille verte ou rouge**. Toucher une pastille fait passer l’affichage de la variation au prix, puis à la capitalisation. Tri par variation, capitalisation ou A–Z, avec une animation de réordonnancement. Sur mobile, c’est l’onglet « Liste ».
 - **Fiche entreprise façon app Bourse** : symbole, prix dans sa devise, variation en valeur et en %, périodes **1J · 1S · 1M · 6M · 1A**. Le graphique a une échelle à droite, un quadrillage léger et la clôture de la veille en pointillés. **En parcourant la courbe au doigt, le prix, la variation et la date de l’en-tête se mettent à jour**. Suivent un tableau de statistiques (clôture veille, haut et bas de séance, capitalisation, volatilité, place de cotation…), une section « À propos » et les **actualités**.
 - **Partager** : génère une **image 1080×1350** (format Instagram, TikTok ou X) du tableau de bord, avec l’indice IA et le top 3 des hausses et des baisses. Une **légende est prête à poster**. Sur mobile, le bouton ouvre le partage natif.
-- Filtres par domaine, recherche (Entrée ouvre la fiche), version mobile, `prefers-reduced-motion`.
+- **Thème clair ou sombre** : se choisit avec le bouton soleil/lune (révélation circulaire, comme sur macOS) ou dans les Réglages. Le choix est mémorisé. À la première visite, le site suit le réglage de l'appareil. Le thème clair reprend le mode clair d'iOS, et l'image de partage suit le thème actif.
+- **Bulles vivantes** : dans chaque domaine, les bulles tournent lentement autour du centre, dérivent et « respirent ». Elles s'écartent quand la souris passe, puis reviennent avec un ressort. Sur iPhone et iPad, elles glissent selon l'inclinaison de l'appareil (gyroscope), en parallaxe : les petites bulles bougent plus que les grandes.
+- Filtres par domaine, recherche (Entrée ouvre la fiche), version mobile, `prefers-reduced-motion` (aucune animation).
 
 ## Données
 
@@ -71,6 +73,7 @@ src/
   viz/sparkline.js    mini-graphiques
   viz/historyChart.js graphique façon app Bourse (scrubbing) + mini-courbes
   ui/glass.js         composants Liquid Glass (contrôle segmenté, reflets, ressorts)
+  ui/theme.js         thème clair / sombre (mémorisé, suit le système)
   ui/watchlist.js     liste de valeurs façon app Bourse
   ui/                 bandeau, panneau, infobulle, classement, réglages, ambiance, partage
   main.js             assemblage

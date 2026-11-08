@@ -6,7 +6,8 @@
 import * as d3 from 'd3';
 import { gsap } from 'gsap';
 import { COMPANIES, DOMAINS } from '../data/companies.js';
-import { colorFor, fmtCap, fmtPct, reducedMotion } from '../util.js';
+import { colorFor, fmtCap, fmtPct, reducedMotion, themeColors } from '../util.js';
+import { onThemeChange } from '../ui/theme.js';
 
 const ORBIT_ORDER = ['private', 'robotics', 'data', 'infra', 'cloud', 'software', 'chips'];
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -51,6 +52,8 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
     const ring = ORBIT_ORDER.indexOf(d.id);
     members.forEach((n, i) => { n.angle0 = (i / members.length) * Math.PI * 2 + ring * 0.9; });
     d.meanVol = d3.mean(members, (n) => n.co.vol || 0.3);
+    // Rotation lente des bulles autour du centre de leur domaine (sens alterné, ~1 tour / 70-120 s).
+    d.swirl = (0.05 + 0.04 * d.meanVol) * (ring % 2 ? -1 : 1);
   }
 
   const state = {
@@ -65,6 +68,9 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
     core: { s: 0 },
     query: '',
     dragging: null,
+    // "Motion control" : inclinaison lissée (souris sur ordinateur, gyroscope sur mobile)
+    tilt: { x: 0, y: 0, tx: 0, ty: 0 },
+    pointer: { x: 0, y: 0, active: false },
   };
 
   /* ---------- DOM ---------- */
@@ -75,16 +81,16 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
   coreGrad.append('stop').attr('offset', '100%').attr('stop-color', '#0a84ff').attr('stop-opacity', 0);
   // Reflet "perle de verre" partagé par toutes les bulles.
   const sheen = defs.append('radialGradient').attr('id', 'sheen').attr('cx', '35%').attr('cy', '28%').attr('r', '75%');
-  sheen.append('stop').attr('offset', '0%').attr('stop-color', '#fff').attr('stop-opacity', 0.32);
+  const sheenTop = sheen.append('stop').attr('offset', '0%').attr('stop-color', '#fff').attr('stop-opacity', themeColors().shineOp);
   sheen.append('stop').attr('offset', '45%').attr('stop-color', '#fff').attr('stop-opacity', 0.05);
   sheen.append('stop').attr('offset', '100%').attr('stop-color', '#fff').attr('stop-opacity', 0);
 
   const world = svg.append('g').attr('class', 'world');
   const coreG = world.append('g').attr('class', 'core').style('opacity', 0);
   const coreHalo = coreG.append('circle').attr('fill', 'url(#coreGrad)');
-  const coreBall = coreG.append('circle').attr('fill', '#2c2c2e').attr('stroke-width', 1.5);
+  const coreBall = coreG.append('circle').attr('fill', themeColors().coreFill).attr('stroke-width', 1.5);
   const coreShine = coreG.append('circle').attr('fill', 'url(#sheen)');
-  const coreTitle = coreG.append('text').attr('fill', '#f5f5f7').attr('font-weight', 700).text('IA');
+  const coreTitle = coreG.append('text').attr('class', 'core-title').attr('font-weight', 700).text('IA');
   const coreSub = coreG.append('text');
 
   const ringLayer = world.append('g');
@@ -136,7 +142,7 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
     .append('circle')
     .attr('class', 'body')
     .attr('fill', (n) => (n.co.listed ? colorFor(0) : n.dom.color))
-    .attr('fill-opacity', (n) => (n.co.listed ? 0.2 : 0.05))
+    .attr('fill-opacity', (n) => (n.co.listed ? themeColors().bubbleFillOp : themeColors().privateFillOp))
     .attr('stroke', (n) => (n.co.listed ? colorFor(0) : n.dom.color));
   nodeG.append('circle').attr('class', 'shine').attr('fill', 'url(#sheen)');
   nodeG.append('circle').attr('class', 'ripple');
@@ -171,10 +177,39 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
     if (state.zoomed) zoomTo(null);
     onBackground?.();
   });
-  svg.on('mousemove', (ev) => {
+  svg.on('pointermove', (ev) => {
     state.mouse.x = (ev.offsetX / (W || 1) - 0.5) * 2;
     state.mouse.y = (ev.offsetY / (H || 1) - 0.5) * 2;
+    if (!hasGyro) { state.tilt.tx = state.mouse.x; state.tilt.ty = state.mouse.y; }
+    state.pointer.x = ev.offsetX;
+    state.pointer.y = ev.offsetY;
+    state.pointer.active = ev.pointerType === 'mouse';
   });
+  svg.on('pointerleave', () => {
+    state.pointer.active = false;
+    if (!hasGyro) { state.tilt.tx = 0; state.tilt.ty = 0; }
+  });
+
+  // Gyroscope (iPhone / iPad / Android) : la scène s'incline, les petites bulles glissent davantage.
+  let hasGyro = false;
+  function onOrientation(e) {
+    if (e.gamma == null) return;
+    hasGyro = true;
+    state.tilt.tx = clamp(e.gamma / 25, -1, 1);
+    state.tilt.ty = clamp((e.beta - 45) / 25, -1, 1);
+  }
+  if ('ontouchstart' in window && 'DeviceOrientationEvent' in window && !reducedMotion) {
+    const DOE = window.DeviceOrientationEvent;
+    if (typeof DOE.requestPermission === 'function') {
+      // iOS : l'autorisation doit être demandée lors d'un geste de l'utilisateur.
+      window.addEventListener('touchend', function ask() {
+        window.removeEventListener('touchend', ask);
+        DOE.requestPermission().then((r) => { if (r === 'granted') window.addEventListener('deviceorientation', onOrientation); }).catch(() => {});
+      });
+    } else {
+      window.addEventListener('deviceorientation', onOrientation);
+    }
+  }
 
   /* ---------- Physique ---------- */
   // Rayon "physique" (espace monde, sans zoom) selon le mélange Galaxie ⇄ Bulles.
@@ -182,28 +217,89 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
   const alive = (n) => n.show !== false; // visibilité cible (n.vis est la valeur animée)
 
   const collide = d3.forceCollide().strength(0.75).iterations(2);
-  const fx = d3.forceX();
-  const fy = d3.forceY();
+  const maxCap = d3.max(COMPANIES, (c) => c.cap);
 
-  function targetX(n) {
-    if (state.mode === 'bubbles' && alive(n)) return W / 2;
-    return n.pack.x;
-  }
-  function targetY(n) {
-    if (state.mode === 'bubbles' && alive(n)) return H / 2;
-    return n.pack.y;
+  // Cible "vivante" d'une bulle en mode Galaxie :
+  //  position d'origine → tournée lentement autour du centre du domaine (tourbillon)
+  //  + dérive organique (somme de sinus à fréquences non commensurables)
+  //  + glissement selon l'inclinaison (les petites bulles, "plus proches", bougent plus).
+  function homeTarget(n) {
+    const d = n.dom;
+    const dx = n.pack.x - d.pack.x;
+    const dy = n.pack.y - d.pack.y;
+    if (reducedMotion) return [n.pack.x, n.pack.y];
+    const t = state.t;
+    const a = t * d.swirl;
+    const ca = Math.cos(a), sa = Math.sin(a);
+    let x = d.pack.x + dx * ca - dy * sa;
+    let y = d.pack.y + dx * sa + dy * ca;
+    const room = Math.max(0, d.pack.r - Math.hypot(dx, dy) - n.pack.r);
+    const amp = Math.min(14, 3 + room * 0.6);
+    const p = n.phase;
+    x += amp * (0.7 * Math.sin(t * 0.31 + p) + 0.3 * Math.sin(t * 0.73 + p * 1.7));
+    y += amp * (0.7 * Math.cos(t * 0.27 + p * 1.3) + 0.3 * Math.sin(t * 0.61 + p * 0.4));
+    const depth = 4 + 14 * (1 - Math.sqrt(n.co.cap / maxCap));
+    x += state.tilt.x * depth;
+    y += state.tilt.y * depth;
+    // On reste à l'intérieur de l'anneau du domaine.
+    const ox = x - d.pack.x, oy = y - d.pack.y;
+    const dist = Math.hypot(ox, oy);
+    const lim = Math.max(0, d.pack.r - n.pack.r - 2);
+    if (dist > lim && dist > 0) {
+      x = d.pack.x + (ox / dist) * lim;
+      y = d.pack.y + (oy / dist) * lim;
+    }
+    return [x, y];
   }
 
-  // Dérive douce (bruit sinusoïdal) : les bulles "respirent" comme sur CoinGecko.
+  // Ressort doux vers la cible (inertie "à la Apple" : on suit, on dépasse un peu, on se pose).
+  function home() {
+    const bub = state.mode === 'bubbles';
+    for (const n of nodes) {
+      if (n.fx != null) continue;
+      let tx, ty, k;
+      if (bub && alive(n)) {
+        tx = W / 2 + state.tilt.x * 30;
+        ty = H / 2 + state.tilt.y * 30;
+        k = 0.012;
+      } else if (bub || !alive(n)) {
+        tx = n.pack.x; ty = n.pack.y; k = 0.08;
+      } else {
+        [tx, ty] = homeTarget(n);
+        k = 0.05;
+      }
+      n.vx += (tx - n.x) * k;
+      n.vy += (ty - n.y) * k;
+    }
+  }
+
+  // Dérive douce supplémentaire en mode Bulles (façon CoinGecko).
   function drift() {
-    if (reducedMotion) return;
-    // amplitude ≈ amp / force de rappel → ~4 px de flottement en Galaxie, davantage en Bulles
-    const amp = state.mode === 'bubbles' ? 0.16 : 0.32;
+    if (reducedMotion || state.mode !== 'bubbles') return;
     const t = state.t;
     for (const n of nodes) {
       if (n.fx != null) continue;
-      n.vx += Math.sin(t * 0.7 + n.phase) * amp;
-      n.vy += Math.cos(t * 0.53 + n.phase * 1.3) * amp;
+      n.vx += Math.sin(t * 0.7 + n.phase) * 0.16;
+      n.vy += Math.cos(t * 0.53 + n.phase * 1.3) * 0.16;
+    }
+  }
+
+  // Champ "magnétique" du pointeur : les bulles s'écartent doucement au passage de la main,
+  // puis reviennent sur leur ressort (comme une main dans l'eau).
+  function pointerField() {
+    const pt = state.pointer;
+    if (reducedMotion || !pt.active || state.dragging || state.blend.m > 0.5) return;
+    const [px, py] = toWorld(pt.x, pt.y);
+    const R = 130 / state.view.k;
+    for (const n of nodes) {
+      if (!alive(n) || n.fx != null) continue;
+      const dx = n.x - px, dy = n.y - py;
+      const dist = Math.hypot(dx, dy);
+      const reach = R + physR(n);
+      if (dist >= reach || dist < 0.01) continue;
+      const f = (1 - dist / reach) ** 2 * 1.1;
+      n.vx += (dx / dist) * f;
+      n.vy += (dy / dist) * f;
     }
   }
 
@@ -224,20 +320,16 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
     .forceSimulation(nodes)
     .alpha(1)
     .alphaDecay(0)
-    .velocityDecay(0.35)
-    .force('x', fx)
-    .force('y', fy)
+    .velocityDecay(0.3)
+    .force('home', home)
     .force('collide', collide)
     .force('drift', drift)
+    .force('pointer', pointerField)
     .force('bounds', bounds)
     .stop();
 
-  // d3 met en cache cibles et forces : on les réapplique à chaque changement de mise en page / mode.
   function refreshForces() {
-    const bub = state.mode === 'bubbles';
-    fx.x(targetX).strength((n) => (bub && alive(n) ? 0.012 : 0.08));
-    fy.y(targetY).strength((n) => (bub && alive(n) ? 0.016 : 0.08));
-    sim.velocityDecay(state.mode === 'bubbles' ? 0.22 : 0.38);
+    sim.velocityDecay(state.mode === 'bubbles' ? 0.22 : 0.3);
   }
 
   /* ---------- Glisser-lancer ---------- */
@@ -451,6 +543,15 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
     }
   }
   store.subscribe((q) => onQuote(q, true));
+
+  // Changement de thème : on recolore bulles, reflets et noyau.
+  onThemeChange(() => {
+    const tc = themeColors();
+    sheenTop.attr('stop-opacity', tc.shineOp);
+    coreBall.attr('fill', tc.coreFill);
+    for (const n of nodes) n.el.body.setAttribute('fill-opacity', n.co.listed ? tc.bubbleFillOp : tc.privateFillOp);
+    for (const q of store.quotes.values()) onQuote(q, false);
+  });
   // En mode Bulles, les tailles suivent les variations.
   setInterval(() => { if (state.mode === 'bubbles') layoutBubbles(true); }, 2000);
 
@@ -470,10 +571,11 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
 
     const e = state.blend.m;
     const b = state.mix.b;
-    const ms = state.mouse;
-    ms.sx = lerp(ms.sx, ms.x, 0.04);
-    ms.sy = lerp(ms.sy, ms.y, 0.04);
-    if (!reducedMotion) world.attr('transform', `translate(${(-ms.sx * 6).toFixed(2)},${(-ms.sy * 6).toFixed(2)})`);
+    // Inclinaison lissée par un ressort (souris ou gyroscope) → légère parallaxe de toute la scène.
+    const tl = state.tilt;
+    tl.x = lerp(tl.x, tl.tx, 0.06);
+    tl.y = lerp(tl.y, tl.ty, 0.06);
+    if (!reducedMotion) world.attr('transform', `translate(${(-tl.x * 7).toFixed(2)},${(-tl.y * 7).toFixed(2)})`);
 
     const { x: vx, y: vy, k } = state.view;
     const cx = W / 2, cy = H / 2;
@@ -513,7 +615,9 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
       const oy = cy + Math.sin(a) * n.dom.orbit.R;
       const x = lerp(sx, ox, e);
       const y = lerp(sy, oy, e);
-      const r = Math.max(0, lerp(sr, n.orbR * n.hov, e) * n.vis * n.s);
+      // Respiration : ±1,5 % (un peu plus pour les valeurs qui bougent beaucoup).
+      const breath = reducedMotion ? 1 : 1 + Math.sin(state.t * 0.9 + n.phase) * 0.015 * (1 + Math.min(Math.abs(n.pct), 3) / 3);
+      const r = Math.max(0, lerp(sr, n.orbR * n.hov, e) * n.vis * n.s * breath);
       n.cur = { x, y, r };
 
       n.el.g.setAttribute('transform', `translate(${x.toFixed(2)},${y.toFixed(2)})`);

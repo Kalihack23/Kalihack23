@@ -9,6 +9,7 @@ import { createPanel, createTooltip } from './ui/panel.js';
 import { createSettings, getApiKey } from './ui/settings.js';
 import { createAmbient } from './ui/ambient.js';
 import { createSegmented, initGlass } from './ui/glass.js';
+import { getTheme, onThemeChange, setTheme } from './ui/theme.js';
 import { buildCaption, renderShareImage } from './ui/share.js';
 import { colorFor, fmtCap, fmtPct, reducedMotion } from './util.js';
 
@@ -239,6 +240,23 @@ function updateStats() {
 }
 updateStats();
 setInterval(updateStats, 1500);
+
+/* ---------- Thème clair / sombre ---------- */
+$('theme-toggle').addEventListener('click', (ev) => setTheme(getTheme() === 'light' ? 'dark' : 'light', ev));
+const themeSeg = createSegmented($('theme-seg'), {
+  label: 'Thème',
+  value: getTheme(),
+  items: [
+    { id: 'light', label: 'Clair' },
+    { id: 'dark', label: 'Sombre' },
+  ],
+  onChange: (t) => setTheme(t),
+});
+onThemeChange((t) => {
+  themeSeg.select(t, { emit: false });
+  $('theme-toggle').setAttribute('aria-label', t === 'light' ? 'Passer au thème sombre' : 'Passer au thème clair');
+  updateStats();
+});
 
 /* ---------- Réglages ---------- */
 const settings = createSettings($('settings'), $('api-key'), { onChange: () => location.reload() });

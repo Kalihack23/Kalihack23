@@ -1,6 +1,14 @@
 // Fond d'ambiance façon Apple : quelques halos de lumière très diffus qui dérivent lentement
 // sur un fond graphite. Rendu en basse résolution (c'est flou par nature) et à ~30 i/s.
 import { reducedMotion } from '../util.js';
+import { getTheme, onThemeChange } from './theme.js';
+
+const LIGHT_BLOBS = [
+  { c: [0, 122, 255], a: 0.1, r: 0.55, sx: 0.07, sy: 0.05, ox: 0.75, oy: 0.2 },
+  { c: [175, 82, 222], a: 0.07, r: 0.5, sx: 0.05, sy: 0.08, ox: 0.2, oy: 0.75 },
+  { c: [90, 200, 250], a: 0.08, r: 0.45, sx: 0.09, sy: 0.04, ox: 0.5, oy: 0.55 },
+  { c: [255, 255, 255], a: 0.7, r: 0.6, sx: 0.03, sy: 0.06, ox: 0.3, oy: 0.15 },
+];
 
 const BLOBS = [
   { c: [10, 132, 255], a: 0.16, r: 0.55, sx: 0.07, sy: 0.05, ox: 0.75, oy: 0.2 },
@@ -27,11 +35,13 @@ export function createAmbient(canvas) {
     const s = t / 1000;
     mouse.sx += (mouse.x - mouse.sx) * 0.03;
     mouse.sy += (mouse.y - mouse.sy) * 0.03;
-    ctx.fillStyle = '#1c1c1e';
+    const light = getTheme() === 'light';
+    ctx.fillStyle = light ? '#f2f2f7' : '#1c1c1e';
     ctx.fillRect(0, 0, w, h);
-    ctx.globalCompositeOperation = 'lighter';
+    // En sombre, les halos s'additionnent (lumière) ; en clair, ils se superposent simplement.
+    ctx.globalCompositeOperation = light ? 'source-over' : 'lighter';
     const m = Math.max(w, h);
-    BLOBS.forEach((b, i) => {
+    (light ? LIGHT_BLOBS : BLOBS).forEach((b, i) => {
       const x = (b.ox + Math.sin(s * b.sx + i) * 0.12 + mouse.sx * 0.03 * (i + 1)) * w;
       const y = (b.oy + Math.cos(s * b.sy + i * 2) * 0.1 + mouse.sy * 0.03 * (i + 1)) * h;
       const r = b.r * m;
@@ -42,6 +52,7 @@ export function createAmbient(canvas) {
       ctx.fillRect(0, 0, w, h);
     });
     ctx.globalCompositeOperation = 'source-over';
+    if (light) return;
     // Vignette douce.
     const v = ctx.createRadialGradient(w / 2, h / 2, m * 0.3, w / 2, h / 2, m * 0.8);
     v.addColorStop(0, 'rgba(0,0,0,0)');
@@ -63,6 +74,7 @@ export function createAmbient(canvas) {
     mouse.x = e.clientX / window.innerWidth - 0.5;
     mouse.y = e.clientY / window.innerHeight - 0.5;
   }, { passive: true });
+  onThemeChange(() => draw(performance.now()));
   resize();
   if (!reducedMotion) requestAnimationFrame(loop);
 }

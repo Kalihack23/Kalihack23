@@ -1,5 +1,12 @@
 // Image de partage 1080×1350 (format portrait Instagram / TikTok / X) + légende prête à poster.
-import { colorFor, fmtCap, fmtPct } from '../util.js';
+import { colorFor, fmtCap, fmtPct, themeColors } from '../util.js';
+
+// Palette de l'image : suit le thème actif (clair ou sombre).
+const PALETTES = {
+  dark: { bg: '#1c1c1e', core: '#2c2c2e', text: '#f5f5f7', text2: '#98989f', text3: '#636366', card: 'rgba(255,255,255,0.06)', cardLine: 'rgba(255,255,255,0.14)', shine: 0.3, fillOp: 0.22, blend: 'lighter', blobs: [['10,132,255', 0.16], ['191,90,242', 0.1], ['255,255,255', 0.035]], up: '#30d158', down: '#ff453a', orange: '#ff9f0a' },
+  light: { bg: '#f2f2f7', core: '#ffffff', text: '#1d1d1f', text2: '#6e6e73', text3: '#8e8e93', card: 'rgba(255,255,255,0.85)', cardLine: 'rgba(0,0,0,0.08)', shine: 0.55, fillOp: 0.26, blend: 'source-over', blobs: [['0,122,255', 0.1], ['175,82,222', 0.07], ['255,255,255', 0.6]], up: '#34c759', down: '#ff3b30', orange: '#c45f00' },
+};
+let P = PALETTES.dark;
 
 const W = 1080;
 const H = 1350;
@@ -17,8 +24,9 @@ function alpha(color, a) {
 }
 
 function drawBackground(ctx) {
-  ctx.fillStyle = '#1c1c1e';
+  ctx.fillStyle = P.bg;
   ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = P.blend;
   const blob = (x, y, r, rgb, a) => {
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
     g.addColorStop(0, `rgba(${rgb},${a})`);
@@ -26,9 +34,10 @@ function drawBackground(ctx) {
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
   };
-  blob(820, 220, 760, '10,132,255', 0.16);
-  blob(160, 1180, 700, '191,90,242', 0.1);
-  blob(540, 700, 600, '255,255,255', 0.035);
+  blob(820, 220, 760, ...P.blobs[0]);
+  blob(160, 1180, 700, ...P.blobs[1]);
+  blob(540, 700, 600, ...P.blobs[2]);
+  ctx.globalCompositeOperation = 'source-over';
 }
 
 function drawViz(ctx, snap, box) {
@@ -45,15 +54,15 @@ function drawViz(ctx, snap, box) {
     const cx = tx(snap.core.x), cy = ty(snap.core.y), r = snap.core.r * k;
     const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 2.2);
     g.addColorStop(0, 'rgba(255,255,255,0.9)');
-    g.addColorStop(0.3, 'rgba(155,133,255,0.7)');
-    g.addColorStop(1, 'rgba(124,92,255,0)');
+    g.addColorStop(0.35, 'rgba(100,210,255,0.45)');
+    g.addColorStop(1, 'rgba(10,132,255,0)');
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(cx, cy, r * 2.2, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#2c2c2e';
+    ctx.fillStyle = P.core;
     ctx.strokeStyle = colorFor(snap.core.index);
     ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = P.text;
     ctx.font = `700 ${Math.round(r * 0.55)}px ${MONO}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -77,7 +86,7 @@ function drawViz(ctx, snap, box) {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'bottom';
       ctx.lineWidth = 6;
-      ctx.strokeStyle = '#1c1c1e';
+      ctx.strokeStyle = P.bg;
       const label = d.name.toUpperCase();
       ctx.strokeText(label, cx, cy - r - 10);
       ctx.fillStyle = d.color;
@@ -87,7 +96,7 @@ function drawViz(ctx, snap, box) {
 
   for (const n of snap.nodes) {
     const cx = tx(n.x), cy = ty(n.y), r = n.r * k;
-    ctx.fillStyle = alpha(n.color, n.listed ? 0.22 : 0.06);
+    ctx.fillStyle = alpha(n.color, n.listed ? P.fillOp : 0.06);
     ctx.strokeStyle = n.color;
     ctx.lineWidth = r > 20 ? 2.5 : 1.5;
     ctx.setLineDash(n.listed ? [] : [5, 5]);
@@ -95,7 +104,7 @@ function drawViz(ctx, snap, box) {
     ctx.setLineDash([]);
     if (r > 4) {
       const sh = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.45, 0, cx, cy, r);
-      sh.addColorStop(0, 'rgba(255,255,255,0.3)');
+      sh.addColorStop(0, `rgba(255,255,255,${P.shine})`);
       sh.addColorStop(0.45, 'rgba(255,255,255,0.05)');
       sh.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = sh;
@@ -104,7 +113,7 @@ function drawViz(ctx, snap, box) {
     if (r > 16) {
       const fs = Math.min(34, r * 0.36);
       const label = n.ticker.length > 6 ? n.name.split(' ')[0] : n.ticker;
-      ctx.fillStyle = '#f5f5f7';
+      ctx.fillStyle = P.text;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.font = `600 ${fs}px ${MONO}`;
@@ -124,35 +133,36 @@ export async function renderShareImage({ snapshot, stats, movers, sourceLabel })
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext('2d');
+  P = PALETTES[themeColors().theme] || PALETTES.dark;
   drawBackground(ctx);
 
   // En-tête
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = '#f5f5f7';
+  ctx.fillStyle = P.text;
   ctx.font = `700 54px ${SANS}`;
   ctx.fillText('AI Orbit', 60, 110);
-  ctx.fillStyle = '#98989f';
+  ctx.fillStyle = P.text2;
   ctx.font = `400 24px ${SANS}`;
   ctx.fillText('Les valeurs qui construisent l’IA', 60, 148);
   const date = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(new Date());
   ctx.textAlign = 'right';
   ctx.font = `400 22px ${MONO}`;
   ctx.fillText(date, W - 60, 110);
-  ctx.fillStyle = sourceLabel.startsWith('DÉMO') ? '#ff9f0a' : '#30d158';
+  ctx.fillStyle = sourceLabel.startsWith('DÉMO') ? P.orange : P.up;
   ctx.fillText(sourceLabel, W - 60, 148);
 
   // Statistiques
   const statY = 220;
   const cols = [
     ['Indice IA', fmtPct(stats.index), colorFor(stats.index * 2)],
-    ['Capitalisation', fmtCap(stats.cap), '#f5f5f7'],
-    ['Hausse / Baisse', `${stats.up} / ${stats.down}`, '#f5f5f7'],
+    ['Capitalisation', fmtCap(stats.cap), P.text],
+    ['Hausse / Baisse', `${stats.up} / ${stats.down}`, P.text],
   ];
   cols.forEach(([label, value, color], i) => {
     const x = 60 + i * 330;
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#98989f';
+    ctx.fillStyle = P.text2;
     ctx.font = `500 18px ${SANS}`;
     ctx.fillText(label, x, statY);
     ctx.fillStyle = color;
@@ -164,8 +174,8 @@ export async function renderShareImage({ snapshot, stats, movers, sourceLabel })
 
   // Classement
   const boxY = 1060;
-  ctx.fillStyle = 'rgba(255,255,255,0.06)';
-  ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+  ctx.fillStyle = P.card;
+  ctx.strokeStyle = P.cardLine;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.roundRect(60, boxY, W - 120, 200, 32);
@@ -178,7 +188,7 @@ export async function renderShareImage({ snapshot, stats, movers, sourceLabel })
     ctx.fillText(title, x, boxY + 46);
     rows.slice(0, 3).forEach((r, i) => {
       const y = boxY + 92 + i * 40;
-      ctx.fillStyle = '#f5f5f7';
+      ctx.fillStyle = P.text;
       ctx.font = `600 26px ${MONO}`;
       ctx.textAlign = 'left';
       ctx.fillText(r.ticker, x, y);
@@ -187,11 +197,11 @@ export async function renderShareImage({ snapshot, stats, movers, sourceLabel })
       ctx.fillText(fmtPct(r.pct), x + 380, y);
     });
   };
-  list('▲ Top hausses', movers.gainers, 100, '#30d158');
-  list('▼ Top baisses', movers.losers, 580, '#ff453a');
+  list('▲ Top hausses', movers.gainers, 100, P.up);
+  list('▼ Top baisses', movers.losers, 580, P.down);
 
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#636366';
+  ctx.fillStyle = P.text3;
   ctx.font = `400 18px ${SANS}`;
   ctx.fillText('Données à titre informatif — pas un conseil en investissement', W / 2, H - 40);
 

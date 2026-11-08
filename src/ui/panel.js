@@ -5,6 +5,7 @@ import { sparklineSVG } from '../viz/sparkline.js';
 import { renderHistoryChart, scrubLabel } from '../viz/historyChart.js';
 import { fetchHistory, fetchNews } from '../data/history.js';
 import { createSegmented } from './glass.js';
+import { onThemeChange } from './theme.js';
 import { arrow, colorFor, fmtCap, fmtPct, fmtPrice, reducedMotion } from '../util.js';
 
 const COUNTRY = { US: 'États-Unis', TW: 'Taïwan', NL: 'Pays-Bas', GB: 'Royaume-Uni', IE: 'Irlande', DE: 'Allemagne', CH: 'Suisse', FR: 'France', KR: 'Corée du Sud', JP: 'Japon', CN: 'Chine', IN: 'Inde' };
@@ -86,8 +87,6 @@ const esc = (str) => String(str ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp
 const numFmt = (v, cur) => fmtPrice(v, cur).replace(/\s?[^\d\s,. -]+$/u, '').trim();
 const signed = (v, cur) => `${v >= 0 ? '+' : '−'}${numFmt(Math.abs(v), cur)}`;
 const EXCHANGES = { PA: 'Euronext Paris', AS: 'Euronext Amsterdam', DE: 'Xetra', SW: 'SIX Suisse', T: 'Bourse de Tokyo', KS: 'KRX Séoul', HK: 'HKEX', TW: 'TWSE Taïwan' };
-const UP = '#30d158';
-const DOWN = '#ff453a';
 
 export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
   let current = null;
@@ -178,7 +177,7 @@ export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
       priceEl.textContent = numFmt(price, q.currency);
     }
     chEl.textContent = `${signed(diff, q.currency)} (${fmtPct(pct)})`;
-    chEl.style.color = diff >= 0 ? UP : DOWN;
+    chEl.style.color = diff >= 0 ? 'var(--up)' : 'var(--down)';
     whenEl.textContent = label;
   }
 
@@ -277,6 +276,8 @@ export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
   closeBtn.addEventListener('click', close);
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && current) close(); });
   store.subscribe((q) => { if (current && current.listed && current.ticker === q.ticker) update(q); });
+  // Thème changé : on redessine la courbe avec les nouvelles couleurs.
+  onThemeChange(() => { if (current && current.listed) drawChart(false); });
 
   return { open, close, get current() { return current; } };
 }

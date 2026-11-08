@@ -11,15 +11,147 @@
   --text: #f5f5f7;
   --text-2: #98989f;
   --text-3: #636366;
+  --text-body: #d1d1d6;
   --up: #30d158;
   --down: #ff453a;
   --flat: #8e8e93;
   --blue: #0a84ff;
+  --orange: #ff9f0a;
+  --link: #64d2ff;
+  /* Verre */
+  --glass-1: rgba(255, 255, 255, 0.1);
+  --glass-2: rgba(255, 255, 255, 0.035);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-hi: rgba(255, 255, 255, 0.2);
+  --glass-lo: rgba(0, 0, 0, 0.22);
+  --spec: rgba(255, 255, 255, 0.16);
+  --rim: rgba(255, 255, 255, 0.42);
+  --rim-2: rgba(255, 255, 255, 0.14);
+  --ctl-1: rgba(255, 255, 255, 0.11);
+  --ctl-2: rgba(255, 255, 255, 0.045);
+  --tint-1: rgba(10, 132, 255, 0.85);
+  --tint-2: rgba(10, 110, 230, 0.75);
+  --tint-glow: rgba(10, 132, 255, 0.35);
+  --lens-1: rgba(255, 255, 255, 0.26);
+  --lens-2: rgba(255, 255, 255, 0.09);
+  --lens-hi: rgba(255, 255, 255, 0.55);
+  --lens-ring: rgba(255, 255, 255, 0.25);
+  --bar-1: rgba(28, 28, 30, 0.72);
+  --bar-2: rgba(28, 28, 30, 0.45);
+  --tape-bg: rgba(28, 28, 30, 0.35);
+  --sheet-1: rgba(58, 58, 60, 0.76);
+  --sheet-2: rgba(36, 36, 38, 0.82);
+  --pop-1: rgba(58, 58, 60, 0.75);
+  --pop-2: rgba(44, 44, 46, 0.65);
+  --chip-mix-1: 26%;
+  --chip-mix-2: 12%;
+  --chip-base-1: rgba(255, 255, 255, 0.08);
+  --chip-base-2: rgba(255, 255, 255, 0.02);
+  /* Remplissages, survols */
+  --fill-1: rgba(255, 255, 255, 0.04);
+  --fill-2: rgba(255, 255, 255, 0.07);
+  --hover: rgba(255, 255, 255, 0.05);
+  --selected: rgba(255, 255, 255, 0.09);
+  --ring-fill: rgba(255, 255, 255, 0.018);
+  --input-bg: rgba(0, 0, 0, 0.25);
+  --scrollbar: rgba(255, 255, 255, 0.15);
+  --grabber: rgba(255, 255, 255, 0.3);
+  --scrim: rgba(0, 0, 0, 0.45);
+  /* Ombres */
+  --shadow-soft: rgba(0, 0, 0, 0.2);
+  --shadow: rgba(0, 0, 0, 0.28);
+  --shadow-strong: rgba(0, 0, 0, 0.5);
+  /* Graphiques */
+  --grid: rgba(255, 255, 255, 0.07);
+  --baseline: rgba(255, 255, 255, 0.35);
+  --veil: rgba(28, 28, 30, 0.55);
+  --cross: rgba(255, 255, 255, 0.55);
+  --cross-ring: #ffffff;
+  /* Bulles (lus par le JS) */
+  --bubble-fill-op: 0.2;
+  --private-fill-op: 0.05;
+  --shine-op: 0.32;
+  --core-fill: #2c2c2e;
   --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', system-ui, sans-serif;
   --spring: cubic-bezier(0.2, 1.25, 0.35, 1);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --radius: 22px;
 }
+
+/* Thème clair : inspiré du mode clair d'iOS / macOS (app Bourse) */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f2f2f7;
+  --bg-2: #ffffff;
+  --bg-3: #e5e5ea;
+  --surface: rgba(255, 255, 255, 0.7);
+  --sep: rgba(60, 60, 67, 0.14);
+  --text: #1d1d1f;
+  --text-2: #6e6e73;
+  --text-3: #8e8e93;
+  --text-body: #3a3a3c;
+  --up: #34c759;
+  --down: #ff3b30;
+  --flat: #8e8e93;
+  --blue: #007aff;
+  --orange: #c45f00;
+  --link: #007aff;
+  --glass-1: rgba(255, 255, 255, 0.78);
+  --glass-2: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-hi: rgba(255, 255, 255, 0.95);
+  --glass-lo: rgba(0, 0, 0, 0.05);
+  --spec: rgba(255, 255, 255, 0.9);
+  --rim: rgba(255, 255, 255, 1);
+  --rim-2: rgba(255, 255, 255, 0.6);
+  --ctl-1: rgba(255, 255, 255, 0.9);
+  --ctl-2: rgba(255, 255, 255, 0.68);
+  --tint-1: rgba(0, 122, 255, 0.95);
+  --tint-2: rgba(0, 105, 230, 0.9);
+  --tint-glow: rgba(0, 122, 255, 0.28);
+  --lens-1: rgba(255, 255, 255, 1);
+  --lens-2: rgba(250, 250, 252, 0.95);
+  --lens-hi: rgba(255, 255, 255, 1);
+  --lens-ring: rgba(0, 0, 0, 0.06);
+  --bar-1: rgba(242, 242, 247, 0.82);
+  --bar-2: rgba(242, 242, 247, 0.62);
+  --tape-bg: rgba(255, 255, 255, 0.5);
+  --sheet-1: rgba(255, 255, 255, 0.86);
+  --sheet-2: rgba(248, 248, 250, 0.9);
+  --pop-1: rgba(255, 255, 255, 0.92);
+  --pop-2: rgba(255, 255, 255, 0.82);
+  --chip-mix-1: 16%;
+  --chip-mix-2: 8%;
+  --chip-base-1: rgba(255, 255, 255, 0.9);
+  --chip-base-2: rgba(255, 255, 255, 0.7);
+  --fill-1: rgba(118, 118, 128, 0.08);
+  --fill-2: rgba(118, 118, 128, 0.12);
+  --hover: rgba(118, 118, 128, 0.08);
+  --selected: rgba(118, 118, 128, 0.14);
+  --ring-fill: rgba(255, 255, 255, 0.45);
+  --input-bg: rgba(118, 118, 128, 0.12);
+  --scrollbar: rgba(0, 0, 0, 0.18);
+  --grabber: rgba(60, 60, 67, 0.3);
+  --scrim: rgba(0, 0, 0, 0.2);
+  --shadow-soft: rgba(0, 0, 0, 0.05);
+  --shadow: rgba(0, 0, 0, 0.08);
+  --shadow-strong: rgba(0, 0, 0, 0.16);
+  --grid: rgba(60, 60, 67, 0.1);
+  --baseline: rgba(60, 60, 67, 0.4);
+  --veil: rgba(255, 255, 255, 0.6);
+  --cross: rgba(60, 60, 67, 0.5);
+  --cross-ring: #ffffff;
+  --bubble-fill-op: 0.24;
+  --private-fill-op: 0.08;
+  --shine-op: 0.6;
+  --core-fill: #ffffff;
+}
+
+/* Bascule de thème : fondu doux sur les grandes surfaces */
+.theme-anim, .theme-anim *, .theme-anim *::before, .theme-anim *::after {
+  transition: background-color 0.5s var(--ease), color 0.5s var(--ease), border-color 0.5s var(--ease), fill 0.5s var(--ease), stroke 0.5s var(--ease), box-shadow 0.5s var(--ease) !important;
+}
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 
 * { box-sizing: border-box; }
 
@@ -58,14 +190,14 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 /* ---------------- Liquid Glass ---------------- */
 .glass {
   isolation: isolate;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.035));
+  background: linear-gradient(180deg, var(--glass-1), var(--glass-2));
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   backdrop-filter: blur(24px) saturate(180%);
-  border: 0.5px solid rgba(255, 255, 255, 0.14);
+  border: 0.5px solid var(--glass-border);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.22),
-    0 10px 30px rgba(0, 0, 0, 0.28);
+    inset 0 1px 0 var(--glass-hi),
+    inset 0 -1px 0 var(--glass-lo),
+    0 10px 30px var(--shadow);
 }
 /* Reflet spéculaire qui suit le pointeur */
 .glass::before {
@@ -75,7 +207,7 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
   z-index: -1;
   border-radius: inherit;
   pointer-events: none;
-  background: radial-gradient(160px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, 0.16), transparent 65%);
+  background: radial-gradient(160px circle at var(--mx, 50%) var(--my, 0%), var(--spec), transparent 65%);
   opacity: var(--hover, 0);
   transition: opacity 0.35s var(--ease);
 }
@@ -87,17 +219,17 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
   border-radius: inherit;
   padding: 1px;
   pointer-events: none;
-  background: linear-gradient(140deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 32%, rgba(255, 255, 255, 0) 68%, rgba(255, 255, 255, 0.14));
+  background: linear-gradient(140deg, var(--rim), transparent 32%, transparent 68%, var(--rim-2));
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
 }
 .glass.tinted {
-  background: linear-gradient(180deg, rgba(10, 132, 255, 0.85), rgba(10, 110, 230, 0.75));
+  background: linear-gradient(180deg, var(--tint-1), var(--tint-2));
   border-color: rgba(255, 255, 255, 0.22);
 }
 .glass-bar {
-  background: linear-gradient(180deg, rgba(28, 28, 30, 0.72), rgba(28, 28, 30, 0.45));
+  background: linear-gradient(180deg, var(--bar-1), var(--bar-2));
   -webkit-backdrop-filter: blur(30px) saturate(180%);
   backdrop-filter: blur(30px) saturate(180%);
   border-bottom: 0.5px solid var(--sep);
@@ -142,7 +274,7 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 }
 .status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--flat); }
 .status[data-mode='live'] .dot { background: var(--up); animation: ping 1.8s infinite; }
-.status[data-mode='demo'] .dot { background: #ff9f0a; }
+.status[data-mode='demo'] .dot { background: var(--orange); }
 .status[data-mode='error'] .dot { background: var(--down); }
 
 .icon-btn {
@@ -156,6 +288,12 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 .icon-btn svg { width: 18px; height: 18px; fill: none; stroke: var(--text); stroke-width: 1.6; transition: transform 0.8s var(--spring); }
 .icon-btn:hover svg { transform: rotate(90deg); }
 
+.theme-btn svg { position: absolute; inset: 0; margin: auto; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.7s var(--spring), opacity 0.35s var(--ease) !important; }
+.theme-btn:hover svg { transform: none; }
+.theme-btn .ico-moon { fill: var(--text); stroke: none; }
+:root[data-theme='dark'] .theme-btn .ico-sun { opacity: 0; transform: rotate(-90deg) scale(0.4); }
+:root[data-theme='light'] .theme-btn .ico-moon { opacity: 0; transform: rotate(90deg) scale(0.4); }
+
 .share-btn {
   position: relative;
   display: inline-flex;
@@ -168,7 +306,7 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
   font-weight: 600;
   transition: box-shadow 0.4s var(--ease);
 }
-.share-btn:hover { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 10px 30px rgba(10, 132, 255, 0.35); }
+.share-btn:hover { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 10px 30px var(--tint-glow); }
 .share-btn svg { width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ---------------- Contrôle segmenté (lentille liquide) ---------------- */
@@ -189,15 +327,15 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
   border-radius: 999px;
   pointer-events: none;
   will-change: transform, width;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.09));
+  background: linear-gradient(180deg, var(--lens-1), var(--lens-2));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.55),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.18),
-    inset 0 0 0 0.5px rgba(255, 255, 255, 0.25),
-    0 3px 12px rgba(0, 0, 0, 0.3);
+    inset 0 1px 0 var(--lens-hi),
+    inset 0 -1px 1px var(--glass-lo),
+    inset 0 0 0 0.5px var(--lens-ring),
+    0 3px 12px var(--shadow);
   transition: background 0.3s;
 }
-.seg.dragging .seg-lens { background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.14)); }
+.seg.dragging .seg-lens { background: linear-gradient(180deg, var(--lens-hi), var(--lens-1)); }
 .liquid-ok .seg-lens {
   -webkit-backdrop-filter: url(#liquid) blur(1.5px) saturate(170%);
   backdrop-filter: url(#liquid) blur(1.5px) saturate(170%);
@@ -221,7 +359,7 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 .tape {
   overflow: hidden;
   border-bottom: 0.5px solid var(--sep);
-  background: rgba(28, 28, 30, 0.35);
+  background: var(--tape-bg);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
   mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
@@ -255,16 +393,16 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
   border-radius: 999px;
   font-size: 12.5px;
   font-weight: 500;
-  border: 0.5px solid rgba(255, 255, 255, 0.14);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 26%, rgba(255, 255, 255, 0.08)), color-mix(in srgb, var(--c) 12%, rgba(255, 255, 255, 0.02)));
+  border: 0.5px solid var(--glass-border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) var(--chip-mix-1), var(--chip-base-1)), color-mix(in srgb, var(--c) var(--chip-mix-2), var(--chip-base-2)));
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   backdrop-filter: blur(20px) saturate(180%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 4px 14px rgba(0, 0, 0, 0.2);
+  box-shadow: inset 0 1px 0 var(--glass-hi), 0 4px 14px var(--shadow-soft);
   transition: background 0.4s var(--ease), color 0.4s, opacity 0.4s;
 }
 .chip i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
 .chip .n { font-size: 11px; color: var(--text-2); }
-.chip.off { color: var(--text-2); background: rgba(255, 255, 255, 0.04); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08); }
+.chip.off { color: var(--text-2); background: var(--fill-1); box-shadow: inset 0 1px 0 var(--fill-2); }
 .chip.off i { background: var(--text-3); }
 
 .search {
@@ -278,7 +416,7 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
   min-width: 250px;
   transition: box-shadow 0.4s var(--ease);
 }
-.search:focus-within { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 0 3px rgba(10, 132, 255, 0.35); }
+.search:focus-within { box-shadow: inset 0 1px 0 var(--glass-hi), 0 0 0 3px var(--tint-glow); }
 .search svg { width: 15px; height: 15px; fill: none; stroke: var(--text-2); stroke-width: 2; }
 .search input { flex: 1; border: 0; outline: 0; background: none; color: var(--text); font: inherit; font-size: 13px; }
 .search input::placeholder { color: var(--text-3); }
@@ -295,8 +433,8 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 .canvas { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
 #viz { width: 100%; height: 100%; display: block; touch-action: none; cursor: default; }
 
-.domain-ring { fill: rgba(255, 255, 255, 0.018); stroke-width: 1; cursor: zoom-in; transition: fill 0.4s; }
-.domain-ring:hover { fill: rgba(255, 255, 255, 0.04); }
+.domain-ring { fill: var(--ring-fill); stroke-width: 1; cursor: zoom-in; transition: fill 0.4s; }
+.domain-ring:hover { fill: var(--fill-1); }
 .domain-ring.orbit { fill: none; cursor: default; }
 .domain-dash { fill: none; stroke-width: 1; stroke-dasharray: 1.5 9; opacity: 0.35; pointer-events: none; animation: dash 40s linear infinite; }
 .domain-label {
@@ -367,7 +505,7 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
   opacity: 0;
   transform: translateY(6px) scale(0.96);
   transition: opacity 0.2s, transform 0.4s var(--spring);
-  background: linear-gradient(180deg, rgba(58, 58, 60, 0.75), rgba(44, 44, 46, 0.65));
+  background: linear-gradient(180deg, var(--pop-1), var(--pop-2));
 }
 .tooltip.show { opacity: 1; transform: none; }
 .tt-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
@@ -388,10 +526,10 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
   padding: 26px 24px;
   overflow-y: auto;
   border-radius: 30px;
-  background: linear-gradient(180deg, rgba(58, 58, 60, 0.74), rgba(36, 36, 38, 0.8));
+  background: linear-gradient(180deg, var(--sheet-1), var(--sheet-2));
   -webkit-backdrop-filter: blur(24px) saturate(190%);
   backdrop-filter: blur(24px) saturate(190%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 30px 80px rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 1px 0 var(--glass-hi), 0 30px 80px var(--shadow-strong);
   transform: translateX(calc(100% + 40px)) scale(0.96);
   opacity: 0;
   transition: transform 0.75s var(--spring), opacity 0.35s;
@@ -424,22 +562,22 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 .p-src i { width: 6px; height: 6px; border-radius: 50%; background: var(--flat); }
 .p-src.live i { background: var(--up); animation: ping 1.8s infinite; }
 .p-src.delayed i { background: var(--blue); }
-.p-src.sim i { background: #ff9f0a; }
+.p-src.sim i { background: var(--orange); }
 .p-tabs { display: flex; width: 100%; margin-top: 18px; }
 .p-tabs .seg-item { flex: 1; padding: 7px 0; font-size: 12.5px; }
 .p-chart { margin: 12px -4px 4px; min-height: 180px; transition: opacity 0.3s; }
 .p-chart.loading { opacity: 0.35; }
 .hist-svg { width: 100%; height: auto; display: block; overflow: visible; touch-action: none; }
-.hist-lbl { font-family: var(--font); font-size: 10.5px; font-weight: 500; fill: #c7c7cc; font-variant-numeric: tabular-nums; }
+.hist-lbl { font-family: var(--font); font-size: 10.5px; font-weight: 500; fill: var(--text-2); font-variant-numeric: tabular-nums; }
 .hist-lbl.dim { fill: var(--text-2); }
-.hist-readout { font-family: var(--font); font-size: 11.5px; font-weight: 600; fill: var(--text); paint-order: stroke; stroke: #2c2c2e; stroke-width: 4px; font-variant-numeric: tabular-nums; }
-.p-sim { color: #ff9f0a; font-size: 11.5px; min-height: 4px; }
+.hist-readout { font-family: var(--font); font-size: 11.5px; font-weight: 600; fill: var(--text); paint-order: stroke; stroke: var(--bg-2); stroke-width: 4px; font-variant-numeric: tabular-nums; }
+.p-sim { color: var(--orange); font-size: 11.5px; min-height: 4px; }
 .p-chart { margin: 14px -2px 2px; min-height: 210px; }
-.hist-grid line { stroke: rgba(255, 255, 255, 0.07); stroke-width: 1; }
-.hist-base { stroke: rgba(255, 255, 255, 0.35); stroke-width: 1; stroke-dasharray: 1.5 3.5; }
-.hist-veil { fill: rgba(28, 28, 30, 0.55); pointer-events: none; }
-.hist-cross line { stroke: rgba(255, 255, 255, 0.55); stroke-width: 1; }
-.hist-cross circle { stroke: #fff; stroke-width: 2; }
+.hist-grid line { stroke: var(--grid); stroke-width: 1; }
+.hist-base { stroke: var(--baseline); stroke-width: 1; stroke-dasharray: 1.5 3.5; }
+.hist-veil { fill: var(--veil); pointer-events: none; }
+.hist-cross line { stroke: var(--cross); stroke-width: 1; }
+.hist-cross circle { stroke: var(--cross-ring); stroke-width: 2; }
 /* Statistiques façon app Bourse : deux colonnes, libellé gris à gauche, valeur à droite, filets fins */
 .p-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; margin-top: 14px; padding-top: 4px; border-top: 0.5px solid var(--sep); }
 .p-stats.single { grid-template-columns: 1fr; }
@@ -448,13 +586,13 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 .p-stat b { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
 .p-section { margin-top: 24px; }
 .p-section h3 { margin: 0 0 8px; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
-.p-role { margin: 0; line-height: 1.5; font-size: 15px; color: #d1d1d6; }
+.p-role { margin: 0; line-height: 1.5; font-size: 15px; color: var(--text-body); }
 .p-note { margin-top: 18px; font-size: 11.5px; color: var(--text-3); line-height: 1.5; }
 .p-empty { color: var(--text-2); font-size: 13px; list-style: none; }
 .p-news ul { list-style: none; margin: 0; padding: 0; }
 .p-news li + li { border-top: 0.5px solid var(--sep); }
 .p-news a { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; padding: 12px 6px; margin: 0 -6px; border-radius: 12px; color: inherit; text-decoration: none; transition: background 0.3s; }
-.p-news a:hover { background: rgba(255, 255, 255, 0.05); }
+.p-news a:hover { background: var(--hover); }
 .p-news-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .p-news .p-news-src { font-size: 12px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
 .p-news b { font-size: 15px; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; }
@@ -475,10 +613,10 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 .wl-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 0 18px; }
 .wl-head h2 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.025em; }
 .wl-date { margin: 0; font-size: 13px; font-weight: 600; color: var(--text-2); }
-.wl-count { margin-top: 6px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--text-2); background: rgba(255, 255, 255, 0.07); font-variant-numeric: tabular-nums; }
+.wl-count { margin-top: 6px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--text-2); background: var(--fill-2); font-variant-numeric: tabular-nums; }
 .wl-sort { display: flex; margin: 12px 14px 6px; }
 .wl-sort .seg-item { flex: 1; padding: 6px 0; font-size: 12px; }
-.wl-list { list-style: none; margin: 0; padding: 0 8px 12px; overflow-y: auto; flex: 1; min-height: 0; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.15) transparent; }
+.wl-list { list-style: none; margin: 0; padding: 0 8px 12px; overflow-y: auto; flex: 1; min-height: 0; scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent; }
 .wl-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 64px 84px;
@@ -491,8 +629,8 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
   transition: background 0.25s;
 }
 .wl-row::after { content: ''; position: absolute; left: 10px; right: 10px; bottom: 0; height: 0.5px; background: var(--sep); }
-.wl-row:hover { background: rgba(255, 255, 255, 0.05); }
-.wl-row.selected { background: rgba(255, 255, 255, 0.09); }
+.wl-row:hover { background: var(--hover); }
+.wl-row.selected { background: var(--selected); }
 .wl-row:focus-visible { outline-offset: -2px; }
 .wl-id { display: flex; flex-direction: column; min-width: 0; }
 .wl-id b { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
@@ -524,16 +662,19 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
   padding: 26px;
   border-radius: 28px;
   color: var(--text);
-  background: linear-gradient(180deg, rgba(58, 58, 60, 0.78), rgba(36, 36, 38, 0.82));
+  background: linear-gradient(180deg, var(--sheet-1), var(--sheet-2));
   -webkit-backdrop-filter: blur(40px) saturate(190%);
   backdrop-filter: blur(40px) saturate(190%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 30px 90px rgba(0, 0, 0, 0.55);
+  box-shadow: inset 0 1px 0 var(--glass-hi), 0 30px 90px var(--shadow-strong);
 }
-.settings::backdrop { background: rgba(0, 0, 0, 0.45); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.settings::backdrop { background: var(--scrim); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 .settings[open] { animation: pop 0.55s var(--spring); }
 .settings h2 { margin: 0 0 10px; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
-.settings p { color: #d1d1d6; font-size: 14px; line-height: 1.55; }
-.settings a { color: #64d2ff; }
+.settings p { color: var(--text-body); font-size: 14px; line-height: 1.55; }
+.settings a { color: var(--link); }
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 6px 0 18px; font-size: 14px; font-weight: 500; }
+.settings-row .seg-item { padding: 6px 16px; }
+.settings-sub { margin: 0 0 4px; padding-top: 16px; border-top: 0.5px solid var(--sep); font-size: 15px; font-weight: 600; }
 .settings label { display: block; margin-top: 14px; font-size: 13px; color: var(--text-2); }
 .settings input, .settings textarea {
   display: block;
@@ -542,8 +683,8 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
   padding: 11px 13px;
   border-radius: 12px;
   border: 0;
-  background: rgba(0, 0, 0, 0.25);
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.12);
+  background: var(--input-bg);
+  box-shadow: inset 0 0 0 0.5px var(--glass-border);
   color: var(--text);
   font: 13px/1.5 var(--font);
 }
@@ -555,34 +696,36 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
   margin: 6px 0 4px;
   border-radius: 18px;
   overflow: hidden;
-  background: #1c1c1e;
+  background: var(--bg);
   min-height: 120px;
   display: grid;
   place-items: center;
   color: var(--text-2);
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 0.5px var(--glass-border);
 }
 .share-preview canvas { display: block; width: auto; max-width: 100%; height: auto; max-height: 50vh; margin: 0 auto; }
 
 /* Perf : les contrôles posés sur une barre déjà floutée (ou sur un fond uni) n'ont pas besoin
    d'un second flou ; dégradés + liserés suffisent à l'effet verre et évitent de recalculer
    un flou à chaque image. */
-.topbar .glass, .filters .glass, .chip, .seg:not(.p-tabs) {
+.topbar .glass, .filters .glass, .chip, .seg:not(.p-tabs), .watchlist, .watchlist .glass {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-.topbar .glass:not(.tinted), .filters .glass { background: linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.045)); }
+/* La liste repose sur le fond d'ambiance (déjà flou) : un verre un peu plus dense suffit. */
+.watchlist { background: linear-gradient(180deg, var(--ctl-1), var(--ctl-2)); }
+.topbar .glass:not(.tinted), .filters .glass { background: linear-gradient(180deg, var(--ctl-1), var(--ctl-2)); }
 
 /* ---------------- Animations ---------------- */
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes dash { to { stroke-dashoffset: -600; } }
 @keyframes tape { to { transform: translateX(-50%); } }
 @keyframes ping {
-  0% { box-shadow: 0 0 0 0 rgba(48, 209, 88, 0.6); }
-  100% { box-shadow: 0 0 0 9px rgba(48, 209, 88, 0); }
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--up) 60%, transparent); }
+  100% { box-shadow: 0 0 0 9px transparent; }
 }
-@keyframes flashUp { 0% { background: rgba(48, 209, 88, 0.2); } 100% { background: transparent; } }
-@keyframes flashDown { 0% { background: rgba(255, 69, 58, 0.2); } 100% { background: transparent; } }
+@keyframes flashUp { 0% { background: color-mix(in srgb, var(--up) 20%, transparent); } 100% { background: transparent; } }
+@keyframes flashDown { 0% { background: color-mix(in srgb, var(--down) 20%, transparent); } 100% { background: transparent; } }
 @keyframes pop { from { opacity: 0; transform: scale(0.92) translateY(14px); } }
 
 @media (prefers-reduced-motion: reduce) {
@@ -633,7 +776,12 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
     border-radius: 30px;
     transform: translateY(calc(100% + 30px));
   }
-  .grabber { display: block; position: absolute; top: 8px; left: 50%; width: 38px; height: 5px; margin-left: -19px; border-radius: 5px; background: rgba(255, 255, 255, 0.3); }
+  .grabber { display: block; position: absolute; top: 8px; left: 50%; width: 38px; height: 5px; margin-left: -19px; border-radius: 5px; background: var(--grabber); }
   .p-title { font-size: 24px; }
   .p-price { font-size: 34px; }
 }
+.core-title { fill: var(--text); }
+/* Bouton teinté (bleu) : reflet plus discret pour garder une couleur franche, dans les deux thèmes. */
+.glass.tinted::before { background: radial-gradient(140px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, 0.22), transparent 65%); }
+.glass.tinted::after { background: linear-gradient(140deg, rgba(255, 255, 255, 0.5), transparent 35%, transparent 70%, rgba(255, 255, 255, 0.2)); }
+.glass.tinted { color: #fff; }
