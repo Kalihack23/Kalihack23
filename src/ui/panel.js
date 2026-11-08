@@ -1,8 +1,9 @@
 // Infobulle au survol + panneau de détail (mis à jour en direct).
 import { gsap } from 'gsap';
 import { domainById } from '../data/companies.js';
-import { sparklineSVG } from '../viz/sparkline.js';
-import { renderHistoryChart, scrubLabel } from '../viz/historyChart.js';
+import { miniChartSVG, renderHistoryChart, scrubLabel } from '../viz/historyChart.js';
+import { capIsEstimate, capOf, isStale } from '../data/derived.js';
+import { STATUS_LABEL, exchangeOf, marketStatus } from '../data/markets.js';
 import { fetchHistory, fetchNews } from '../data/history.js';
 import { createSegmented } from './glass.js';
 import { onThemeChange } from './theme.js';
@@ -23,10 +24,13 @@ export function createTooltip(el, store) {
     }
     const q = store.get(co.ticker);
     const c = colorFor(q.changePct);
-    return `<div class="tt-head"><b>${co.ticker}</b><span class="tt-pct" style="color:${c}">${arrow(q.changePct)} ${fmtPct(q.changePct)}</span></div>
+    const stale = isStale(store, q);
+    const status = marketStatus(co, q);
+    return `<div class="tt-head"><b>${co.ticker}</b><span class="tt-pct" style="color:${stale ? 'var(--text-2)' : c}">${stale ? '—' : `${arrow(q.changePct)} ${fmtPct(q.changePct)}`}</span></div>
       <div class="tt-name">${co.name} · <span style="color:${dom.color}">${dom.short}</span></div>
       <div class="tt-px">${fmtPrice(q.price, q.currency)}</div>
-      ${sparklineSVG(q.history, { width: 190, height: 40, color: c, baseline: q.prevClose })}`;
+      ${stale ? '<div class="tt-name">Cours non actualisé</div>' : store.mode === 'live' ? `<div class="tt-name">${STATUS_LABEL[status]}</div>` : ''}
+      ${stale ? '' : miniChartSVG(q.history.slice(-80), q.prevClose, { width: 190, height: 40 })}`;
   }
 
   function show(co, ev) {
@@ -84,9 +88,8 @@ function ago(t) {
   return rel.format(Math.round(s / 86400), 'day');
 }
 const esc = (str) => String(str ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
-const numFmt = (v, cur) => fmtPrice(v, cur).replace(/\s?[^\d\s,. -]+$/u, '').trim();
+const numFmt = (v, cur) => fmtPrice(v, cur).replace(/\s?[^\d\s,.\u202f-]+$/u, '').trim();
 const signed = (v, cur) => `${v >= 0 ? '+' : '−'}${numFmt(Math.abs(v), cur)}`;
-const EXCHANGES = { PA: 'Euronext Paris', AS: 'Euronext Amsterdam', DE: 'Xetra', SW: 'SIX Suisse', T: 'Bourse de Tokyo', KS: 'KRX Séoul', HK: 'HKEX', TW: 'TWSE Taïwan' };
 
 export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
   let current = null;
@@ -100,9 +103,31 @@ export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
     return `<div class="p-stat"><span>${label}</span><b${id ? ` id="${id}"` : ''}>${value}</b></div>`;
   }
 
+  // Haut / bas : données de marché si disponibles, sinon cours reçus pendant la séance.
   function sessionHiLo(q) {
     const h = q.history.length ? q.history : [q.price];
-    return [Math.max(...h, q.price), Math.min(...h, q.price)];
+    return [q.high ? Math.max(q.high, q.price) : Math.max(...h, q.price), q.low ? Math.min(q.low, q.price) : Math.min(...h, q.price)];
+  }
+  const fmtVol = (v) => (v ? new Intl.NumberFormat('fr-FR', { notation: 'compact', maximumFractionDigits: 1 }).format(v) : '—');
+  const capText = (co, q) => `${capIsEstimate(co, q) ? '≈ ' : ''}${fmtCap(capOf(co, q))}`;
+  function paintMarket(co, q) {
+    const el2 = body.querySelector('#p-market');
+    if (!el2) return;
+    if (isStale(store, q)) {
+      el2.textContent = 'Cours non actualisé';
+      el2.className = 'p-market stale';
+      return;
+    }
+    if (store.mode !== 'live') {
+      el2.textContent = '';
+      el2.className = 'p-market';
+      el2.hidden = true;
+      return;
+    }
+    el2.hidden = false;
+    const st = marketStatus(co, q);
+    el2.textContent = STATUS_LABEL[st];
+    el2.className = `p-market ${st}`;
   }
 
   function render(co) {
@@ -118,14 +143,14 @@ export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
       <div class="p-quote">
         <div class="p-price-row"><span class="p-price" id="p-price">${listed ? numFmt(q.price, q.currency) : fmtCap(co.cap)}</span>${listed ? `<span class="p-cur">${co.currency}</span>` : ''}</div>
         ${listed ? `<div class="p-change" id="p-change"></div>
-        <div class="p-when"><span id="p-when">Aujourd’hui</span> · <span id="p-src">${srcBadge(q)}</span></div>` : '<div class="p-when">Valorisation privée estimée · non coté</div>'}
+        <div class="p-when"><span id="p-when">Aujourd’hui</span> · <span id="p-src">${srcBadge(q)}</span><span class="p-market-wrap"> · <span id="p-market"></span></span></div>` : '<div class="p-when">Valorisation privée estimée · non coté</div>'}
       </div>
       ${listed ? `<div class="p-tabs glass" id="p-tabs"></div>
       <div class="p-chart" id="p-chart"></div>
       <div class="p-sim" id="p-sim"></div>
       <div class="p-stats">
-        <div>${stat('Clôture veille', numFmt(q.prevClose, q.currency), 'p-prev')}${stat('Haut séance', numFmt(hi, q.currency), 'p-hi')}${stat('Bas séance', numFmt(lo, q.currency), 'p-lo')}${stat('Devise', co.currency)}</div>
-        <div>${stat('Cap. boursière', fmtCap(co.cap * (q.price / q.prevClose)), 'p-cap')}${stat('Volatilité (an.)', `${Math.round(co.vol * 100)} %`)}${stat('Pays', COUNTRY[co.country] || co.country)}${stat('Place', co.us ? 'NYSE / Nasdaq' : (EXCHANGES[co.symbol.split('.')[1]] || '—'))}</div>
+        <div>${stat('Ouverture', q.open ? numFmt(q.open, q.currency) : '—', 'p-open')}${stat('Haut', numFmt(hi, q.currency), 'p-hi')}${stat('Bas', numFmt(lo, q.currency), 'p-lo')}${stat('Clôture veille', numFmt(q.prevClose, q.currency), 'p-prev')}${stat('Volume', fmtVol(q.volume), 'p-vol')}</div>
+        <div>${stat('Cap. boursière', capText(co, q), 'p-cap')}${stat('Volatilité (an.)', `${Math.round(co.vol * 100)} %`)}${stat('Devise', co.currency)}${stat('Pays', COUNTRY[co.country] || co.country)}${stat('Place', exchangeOf(co)?.name || '—')}</div>
       </div>` : `<div class="p-stats single"><div>${stat('Valorisation', fmtCap(co.cap))}${stat('Pays', COUNTRY[co.country] || co.country)}${stat('Domaine', dom.short)}</div></div>`}
       <section class="p-section">
         <h3>À propos</h3>
@@ -150,7 +175,10 @@ export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
         },
       });
     }
-    if (listed) drawChart(true);
+    if (listed) {
+      paintMarket(co, q);
+      drawChart(true);
+    }
     loadNews(co);
   }
 
@@ -188,6 +216,14 @@ export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
     paintHeader({ price, ref: period.ref, label: period.label, animate });
   }
 
+  // Alternative textuelle du graphique pour les lecteurs d'écran.
+  function describeChart(chart, co, from, to, cur, period) {
+    const svgEl = chart.querySelector('svg');
+    if (!svgEl || !from) return;
+    svgEl.setAttribute('role', 'img');
+    svgEl.setAttribute('aria-label', `Cours de ${co.name} ${period} : de ${fmtPrice(from, cur)} à ${fmtPrice(to, cur)} (${fmtPct(((to - from) / from) * 100)}).`);
+  }
+
   async function drawChart(animate) {
     const co = current;
     const chart = body.querySelector('#p-chart');
@@ -204,6 +240,7 @@ export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
       const pts = q.history.map((p, i) => [i, p]);
       const r = renderHistoryChart(chart, pts, { currency: q.currency, baseline: q.prevClose, mode: 'live', range, animate, onScrub });
       period = { ...r, ref: q.prevClose, label };
+      describeChart(chart, co, q.prevClose, q.price, q.currency, 'aujourd’hui');
       simEl.textContent = '';
       if (!scrubbing) restoreHeader();
       return;
@@ -215,6 +252,7 @@ export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
     chart.classList.remove('loading');
     const r = renderHistoryChart(chart, data.points, { currency: data.currency || q.currency, mode: range === '5d' ? 'intraday' : 'day', range, animate, onScrub });
     period = { ...r, ref: r.first, label };
+    describeChart(chart, co, r.first, r.last, data.currency || q.currency, label.toLowerCase());
     simEl.textContent = data.simulated ? 'Historique simulé (démo)' : '';
     restoreHeader(true);
   }
@@ -246,7 +284,10 @@ export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
     body.querySelector('#p-prev').textContent = numFmt(q.prevClose, q.currency);
     body.querySelector('#p-hi').textContent = numFmt(hi, q.currency);
     body.querySelector('#p-lo').textContent = numFmt(lo, q.currency);
-    body.querySelector('#p-cap').textContent = fmtCap(current.cap * (q.price / q.prevClose));
+    body.querySelector('#p-cap').textContent = capText(current, q);
+    body.querySelector('#p-open').textContent = q.open ? numFmt(q.open, q.currency) : '—';
+    body.querySelector('#p-vol').textContent = fmtVol(q.volume);
+    paintMarket(current, q);
     // Pendant le scrubbing, on ne touche ni à la courbe ni à l'en-tête.
     if (range === 'live' && !scrubbing) {
       drawChart(false);
@@ -254,23 +295,33 @@ export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
     }
   }
 
+  let lastFocus = null;
+  el.inert = true;
+  el.removeAttribute('aria-hidden');
+
   function open(co) {
+    if (!current) lastFocus = document.activeElement;
     current = co;
     scrubbing = false;
     render(co);
     el.classList.add('open');
-    el.setAttribute('aria-hidden', 'false');
+    el.inert = false;
+    el.removeAttribute('aria-hidden');
     el.scrollTop = 0;
     if (!reducedMotion) {
       gsap.fromTo(body.children, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.04, ease: 'power3.out', delay: 0.1 });
     }
+    // Le focus clavier passe dans la fiche (Échap la ferme et le rend à l'élément d'origine).
+    setTimeout(() => closeBtn.focus({ preventScroll: true }), 50);
   }
 
   function close() {
     current = null;
     el.classList.remove('open');
-    el.setAttribute('aria-hidden', 'true');
+    // Panneau fermé : retiré du clavier et des lecteurs d'écran.
+    el.inert = true;
     onClose?.();
+    lastFocus?.focus?.();
   }
 
   closeBtn.addEventListener('click', close);

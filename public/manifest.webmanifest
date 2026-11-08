@@ -1,0 +1,15 @@
+{
+  "name": "AI Orbit — les valeurs de l’IA",
+  "short_name": "AI Orbit",
+  "description": "Les entreprises qui construisent l’IA et leurs cours, en bulles interactives.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1c1c1e",
+  "theme_color": "#1c1c1e",
+  "lang": "fr",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

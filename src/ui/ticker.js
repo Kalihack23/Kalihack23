@@ -1,6 +1,8 @@
 // Bandeau défilant des cours (contenu dupliqué pour une boucle sans couture).
 import { COMPANIES } from '../data/companies.js';
 import { arrow, colorFor, fmtPct, fmtPrice } from '../util.js';
+import { isStale } from '../data/derived.js';
+import { onThemeChange } from './theme.js';
 
 export function createTicker(el, store, { onSelect } = {}) {
   const listed = COMPANIES.filter((c) => c.listed).sort((a, b) => b.cap - a.cap);
@@ -10,6 +12,7 @@ export function createTicker(el, store, { onSelect } = {}) {
     for (const co of listed) {
       const node = document.createElement('span');
       node.className = 'tape-item';
+      if (pass === 1) node.setAttribute('aria-hidden', 'true'); // 2e copie : uniquement pour la boucle visuelle
       node.innerHTML = `<b>${co.ticker}</b><span class="px"></span><span class="pct"></span>`;
       node.addEventListener('click', () => onSelect?.(co));
       el.appendChild(node);
@@ -24,8 +27,9 @@ export function createTicker(el, store, { onSelect } = {}) {
     for (const node of nodes) {
       node.children[1].textContent = fmtPrice(q.price, q.currency);
       const pct = node.children[2];
-      pct.textContent = `${arrow(q.changePct)} ${fmtPct(q.changePct)}`;
-      pct.style.color = colorFor(q.changePct * 2);
+      const stale = isStale(store, q);
+      pct.textContent = stale ? '—' : `${arrow(q.changePct)} ${fmtPct(q.changePct)}`;
+      pct.style.color = stale ? 'var(--text-3)' : colorFor(q.changePct * 2);
       if (flash && q.dir) {
         node.classList.remove('flash-up', 'flash-down');
         void node.offsetWidth;
@@ -36,4 +40,5 @@ export function createTicker(el, store, { onSelect } = {}) {
 
   for (const q of store.quotes.values()) paint(q, false);
   store.subscribe((q) => paint(q, true));
+  onThemeChange(() => { for (const q of store.quotes.values()) paint(q, false); });
 }

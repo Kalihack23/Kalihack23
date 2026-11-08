@@ -3,7 +3,7 @@
 //  - "bubbles" (Bulles)  : façon CoinGecko, libres, taille = variation du jour
 //  - "orbit"   (Orbites) : système solaire, domaines = orbites
 // Une simulation physique (d3-force) tourne en continu : dérive douce, collisions, glisser-lancer.
-import * as d3 from 'd3';
+import * as d3 from '../d3.js';
 import { gsap } from 'gsap';
 import { COMPANIES, DOMAINS } from '../data/companies.js';
 import { colorFor, fmtCap, fmtPct, reducedMotion, themeColors } from '../util.js';
@@ -13,7 +13,7 @@ const ORBIT_ORDER = ['private', 'robotics', 'data', 'infra', 'cloud', 'software'
 const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
-export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackground } = {}) {
+export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackground, capOf = (co) => co.cap } = {}) {
   const svg = d3.select(svgEl);
   let W = 0, H = 0;
 
@@ -123,6 +123,18 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
     .data(nodes)
     .join('g')
     .attr('class', (n) => `node${n.co.listed ? '' : ' private'}`)
+    // Accessibilité : chaque bulle est un bouton atteignable au clavier (Entrée / Espace ouvre la fiche).
+    .attr('tabindex', 0)
+    .attr('role', 'button')
+    .attr('aria-label', (n) => n.co.name)
+    .on('keydown', (ev, n) => {
+      if (ev.key === 'Enter' || ev.key === ' ') {
+        ev.preventDefault();
+        onSelect?.(n.co);
+      }
+    })
+    .on('focus', (_, n) => gsap.to(n, { hov: 1.1, duration: 0.4, ease: 'elastic.out(1, 0.5)' }))
+    .on('blur', (_, n) => gsap.to(n, { hov: 1, duration: 0.3 }))
     .on('mouseenter', (ev, n) => {
       if (!state.dragging) gsap.to(n, { hov: 1.1, duration: 0.5, ease: 'elastic.out(1, 0.5)' });
       onHover?.(n.co, ev);
@@ -170,6 +182,7 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
       ring: g.select('.domain-ring').node(),
       dash: g.select('.domain-dash').node(),
       label: g.select('text').node(),
+      labelPath: g.select('textPath').node(),
     };
   });
 
@@ -238,7 +251,7 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
     const p = n.phase;
     x += amp * (0.7 * Math.sin(t * 0.31 + p) + 0.3 * Math.sin(t * 0.73 + p * 1.7));
     y += amp * (0.7 * Math.cos(t * 0.27 + p * 1.3) + 0.3 * Math.sin(t * 0.61 + p * 0.4));
-    const depth = 4 + 14 * (1 - Math.sqrt(n.co.cap / maxCap));
+    const depth = 4 + 14 * (1 - Math.sqrt(Math.min(1, n.co.cap / maxCap)));
     x += state.tilt.x * depth;
     y += state.tilt.y * depth;
     // On reste à l'intérieur de l'anneau du domaine.
@@ -386,7 +399,7 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
           children: nodes.filter((n) => n.dom === d).map((n) => ({ node: n })),
         })),
       })
-      .sum((d) => (d.node ? Math.pow(d.node.co.cap, 0.62) : 0))
+      .sum((d) => (d.node ? Math.pow(Math.max(0.5, capOf(d.node.co)), 0.62) : 0))
       .sort((a, b) => b.value - a.value);
     const pad = Math.min(W, H) < 500 ? 16 : 26;
     d3.pack().size([W, H]).padding((d) => (d.depth === 0 ? pad : 5))(root);
@@ -416,10 +429,10 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
     if (!listed.length) return;
     const weight = (n) => 0.35 + Math.min(Math.abs(n.pct), 12);
     const total = d3.sum(listed, weight);
-    const k = Math.sqrt((W * H * (Math.min(W, H) < 600 ? 0.36 : 0.42)) / (Math.PI * total));
+    const k = Math.sqrt((W * H * (Math.min(W, H) < 420 ? 0.3 : Math.min(W, H) < 600 ? 0.36 : 0.42)) / (Math.PI * total));
     const maxR = Math.min(W, H) * 0.2;
     for (const n of nodes) {
-      const r = n.co.listed ? clamp(k * Math.sqrt(weight(n)), 6, maxR) : 0;
+      const r = n.co.listed ? clamp(k * Math.sqrt(weight(n)), Math.min(W, H) < 420 ? 4 : 6, maxR) : 0;
       if (animate && !reducedMotion) gsap.to(n, { bubR: r, duration: 1.4, ease: 'elastic.out(1, 0.6)' });
       else n.bubR = r;
     }
@@ -430,13 +443,13 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
     const Rmin = Rmax * 0.24;
     const step = (Rmax - Rmin) / (ORBIT_ORDER.length - 1);
     state.coreR = Rmin * 0.5;
-    const rScale = d3.scaleSqrt([0, d3.max(COMPANIES, (c) => c.cap)], [0, step * 0.55]);
+    const rScale = d3.scaleSqrt([0, d3.max(COMPANIES, (c) => capOf(c))], [0, step * 0.55]);
     ORBIT_ORDER.forEach((id, i) => {
       const d = domById[id];
       d.orbit.R = Rmin + i * step;
       d.orbit.w = 0.05 * (0.6 + d.meanVol) * Math.sqrt(Rmin / d.orbit.R) * (i % 2 ? -1 : 1);
     });
-    for (const n of nodes) n.orbR = Math.max(3, rScale(n.co.cap));
+    for (const n of nodes) n.orbR = Math.max(3, rScale(capOf(n.co)));
   }
 
   let first = true;
@@ -559,6 +572,25 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
     state.index = pct;
   }
 
+  // Libellés accessibles des bulles (mis à jour toutes les 5 s, sans surcharger le DOM).
+  function refreshLabels() {
+    for (const n of nodes) {
+      const label = n.co.listed ? `${n.co.name} (${n.co.ticker}), ${fmtPct(n.pct)} aujourd’hui` : `${n.co.name}, valorisation ${fmtCap(n.co.cap)}`;
+      n.el.g.setAttribute('aria-label', label);
+      n.el.g.toggleAttribute('aria-hidden', !alive(n));
+      if (!alive(n)) n.el.g.setAttribute('tabindex', -1); else n.el.g.setAttribute('tabindex', 0);
+    }
+  }
+  setInterval(refreshLabels, 5000);
+
+  // Nouvelle mise en page (ex. arrivée des vraies capitalisations) avec animation.
+  function relayout() {
+    layoutOrbit();
+    layoutPack(true);
+    if (state.mode === 'bubbles') layoutBubbles(true);
+    refreshForces();
+  }
+
   /* ---------- Rendu image par image ---------- */
   function render(time, deltaMs) {
     if (!W) return;
@@ -604,6 +636,9 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
       const lblOp = state.zoomed && e < 0.5 ? (state.zoomed === d ? 1 : 0.15) : 1;
       d.el.label.style.opacity = (lblOp * clamp(r / 40, 0, 1)).toFixed(3);
       d.el.label.style.fontSize = `${clamp(r / 14, 9, 13)}px`;
+      // Petit anneau : nom court (évite que les étiquettes se chevauchent sur mobile).
+      const lbl = r < 95 ? d.short : d.name;
+      if (lbl !== d.lastLabel) { d.el.labelPath.textContent = lbl; d.lastLabel = lbl; }
     }
 
     for (const n of nodes) {
@@ -712,11 +747,12 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
         name: n.co.name,
         listed: n.co.listed,
         pct: n.pct,
-        cap: n.co.cap,
+        cap: capOf(n.co),
         color: n.co.listed ? n.el.body.getAttribute('fill') : n.dom.color,
       })),
     };
   }
 
-  return { setMode, setFilter, setSelected, setIndex, snapshot, zoomTo: (id) => zoomTo(id ? domById[id] : null) };
+  refreshLabels();
+  return { setMode, setFilter, setSelected, setIndex, snapshot, relayout, zoomTo: (id) => zoomTo(id ? domById[id] : null) };
 }

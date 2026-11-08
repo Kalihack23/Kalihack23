@@ -33,7 +33,7 @@ export async function fetchHistory(co, range, lastPrice) {
   if (hit && Date.now() - hit.at < TTL) return hit.data;
   let data;
   try {
-    const res = await fetch(`/api/history?symbol=${encodeURIComponent(co.symbol)}&range=${range}`);
+    const res = await fetch(`/api/history?symbol=${encodeURIComponent(co.symbol)}&range=${range}`, { signal: AbortSignal.timeout(10000) });
     if (!res.ok) throw new Error(res.status);
     data = await res.json();
     if (!data.points?.length) throw new Error('vide');
@@ -50,7 +50,7 @@ export async function fetchNews(co) {
   const q = co.listed && co.us ? co.ticker : co.name;
   const hit = newsCache.get(q);
   if (hit && Date.now() - hit.at < 10 * 60 * 1000) return hit.items;
-  const res = await fetch(`/api/news?q=${encodeURIComponent(q)}`);
+  const res = await fetch(`/api/news?q=${encodeURIComponent(q)}`, { signal: AbortSignal.timeout(10000) });
   if (!res.ok) throw new Error(res.status);
   const { items } = await res.json();
   newsCache.set(q, { at: Date.now(), items });

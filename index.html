@@ -5,6 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Orbit · Les valeurs de l’IA en temps réel</title>
     <meta name="description" content="Toutes les entreprises qui construisent l’IA — puces, infrastructure, cloud, logiciel — et leurs cours en temps réel, en cercles interactifs." />
+    <!-- Aperçu lors du partage du lien (réseaux sociaux, messageries) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="AI Orbit" />
+    <meta property="og:title" content="AI Orbit · Les valeurs de l’IA en temps réel" />
+    <meta property="og:description" content="Puces, cloud, infrastructure, logiciel : toutes les entreprises de l’IA et leurs cours, en bulles interactives." />
+    <meta property="og:image" content="__SITE_URL__/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:url" content="__SITE_URL__/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="AI Orbit · Les valeurs de l’IA en temps réel" />
+    <meta name="twitter:description" content="Toutes les entreprises de l’IA et leurs cours, en bulles interactives." />
+    <meta name="twitter:image" content="__SITE_URL__/og.png" />
+    <!-- Installation sur l'écran d'accueil -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icon-180.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="AI Orbit" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#1c1c1e" />
     <script>
       // Thème appliqué avant le premier affichage (évite un flash de la mauvaise couleur).
@@ -21,6 +40,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
   </head>
   <body>
+    <a class="skip-link" href="#watchlist">Aller à la liste des valeurs</a>
     <canvas id="ambient" aria-hidden="true"></canvas>
 
     <!-- Filtre de réfraction "Liquid Glass" (appliqué via backdrop-filter sur Chromium) -->
@@ -72,7 +92,7 @@
       </div>
     </header>
 
-    <div class="tape" aria-label="Bandeau des cours"><div class="tape-track" id="tape"></div></div>
+    <section class="tape" aria-label="Bandeau des cours"><div class="tape-track" id="tape"></div></section>
 
     <nav class="filters" aria-label="Filtres">
       <div class="chips" id="chips"></div>
@@ -83,9 +103,9 @@
     </nav>
 
     <main class="stage" id="stage">
-      <aside class="watchlist glass" id="watchlist" aria-label="Liste des valeurs"></aside>
+      <aside class="watchlist glass" id="watchlist" aria-label="Liste des valeurs" tabindex="-1"></aside>
       <div class="canvas">
-        <svg id="viz" role="img" aria-label="Carte interactive des entreprises de l’IA"></svg>
+        <svg id="viz" role="group" aria-label="Carte interactive des entreprises de l’IA (chaque bulle s’ouvre avec Entrée)"></svg>
         <p class="hint glass" id="hint">Attrapez et lancez les bulles · cliquez sur un domaine pour zoomer</p>
         <div class="legend glass" aria-hidden="true">
           <span>-3 %</span><i class="legend-bar"></i><span>+3 %</span>
@@ -93,9 +113,10 @@
       </div>
     </main>
 
-    <div class="tooltip glass" id="tooltip" role="tooltip"></div>
+    <!-- Infobulle purement visuelle (les mêmes infos sont dans la fiche et la liste) -->
+    <div class="tooltip glass" id="tooltip" aria-hidden="true"></div>
 
-    <aside class="panel glass" id="panel" aria-hidden="true">
+    <aside class="panel glass" id="panel" aria-label="Fiche de l’entreprise">
       <span class="grabber" aria-hidden="true"></span>
       <button class="panel-close glass" id="panel-close" aria-label="Fermer">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>

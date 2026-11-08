@@ -1,25 +1,30 @@
-// GET /api/quotes?symbols=NVDA,SU.PA,0700.HK → { quotes: { SYMBOL: { price, prevClose, currency, time } } }
-import { chart, params, send } from './_lib/yahoo.js';
+// GET /api/quotes?symbols=NVDA,SU.PA,…  (symboles du site uniquement)
+// → { quotes: { SYMBOL: { price, prevClose, currency, time, intraday[], marketCap, open, high, low, volume, marketState } },
+//     fx: { EUR: 1.08, JPY: 0.0066, … } }   (taux vers l'USD, pour convertir les capitalisations)
+import { FX_SYMBOLS, details, isAllowedSymbol, params, send, spark } from './_lib/yahoo.js';
 
 export default async function handler(req, res) {
-  const symbols = (params(req).get('symbols') || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter((s) => /^[A-Za-z0-9.\-^=]{1,15}$/.test(s))
-    .slice(0, 100);
-  if (!symbols.length) return send(res, 400, { error: 'symbols manquants' });
+  const symbols = [...new Set((params(req).get('symbols') || '').split(',').map((s) => s.trim()))]
+    .filter((s) => isAllowedSymbol(s) && !s.endsWith('=X'))
+    .slice(0, 120);
+  if (!symbols.length) return send(res, 400, { error: 'symboles manquants ou non autorisés' });
+
+  const [prices, extra] = await Promise.all([spark([...symbols, ...FX_SYMBOLS]), details(symbols)]);
 
   const quotes = {};
-  // Par paquets de 10 pour rester raisonnable avec Yahoo.
-  for (let i = 0; i < symbols.length; i += 10) {
-    const batch = symbols.slice(i, i + 10);
-    const results = await Promise.allSettled(batch.map((s) => chart(s, '1d')));
-    results.forEach((r, j) => {
-      if (r.status === 'fulfilled' && r.value.price > 0) {
-        const { price, prevClose, currency, time, points } = r.value;
-        quotes[batch[j]] = { price, prevClose, currency, time, intraday: points.map((p) => p[1]) };
-      }
-    });
+  for (const s of symbols) {
+    const p = prices[s];
+    if (!p || !(p.price > 0)) continue;
+    quotes[s] = {
+      price: p.price,
+      prevClose: p.prevClose,
+      currency: p.currency,
+      time: p.time,
+      intraday: p.points.map((x) => x[1]),
+      ...(extra[s] || {}),
+    };
   }
-  send(res, 200, { quotes, at: Date.now() }, 30);
+  const fx = { USD: 1 };
+  for (const f of FX_SYMBOLS) if (prices[f]?.price > 0) fx[f.slice(0, 3)] = prices[f].price;
+  send(res, 200, { quotes, fx, at: Date.now() }, 60);
 }

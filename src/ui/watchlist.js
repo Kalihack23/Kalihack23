@@ -6,6 +6,8 @@ import { gsap } from 'gsap';
 import { COMPANIES, domainById } from '../data/companies.js';
 import { miniChartSVG } from '../viz/historyChart.js';
 import { fmtCap, fmtPct, fmtPrice, reducedMotion } from '../util.js';
+import { capOf, isStale } from '../data/derived.js';
+import { marketStatus } from '../data/markets.js';
 import { createSegmented } from './glass.js';
 import { onThemeChange } from './theme.js';
 
@@ -23,13 +25,15 @@ export function createWatchlist(el, store, { onSelect } = {}) {
     <header class="wl-head">
       <div>
         <h2>Valeurs</h2>
-        <p class="wl-date">${dateFmt.format(new Date())}</p>
+        <p class="wl-date" id="wl-date">${dateFmt.format(new Date())}</p>
       </div>
       <span class="wl-count" id="wl-count"></span>
     </header>
     <div class="wl-sort" id="wl-sort"></div>
-    <ul class="wl-list" id="wl-list" role="listbox" aria-label="Valeurs"></ul>`;
+    <ul class="wl-list" id="wl-list" aria-label="Valeurs"></ul>`;
   const ul = el.querySelector('#wl-list');
+  // La date suit le jour (si la page reste ouverte après minuit).
+  setInterval(() => { el.querySelector('#wl-date').textContent = dateFmt.format(new Date()); }, 60000);
 
   createSegmented(el.querySelector('#wl-sort'), {
     label: 'Tri',
@@ -49,15 +53,15 @@ export function createWatchlist(el, store, { onSelect } = {}) {
   for (const co of listed) {
     const li = document.createElement('li');
     li.className = 'wl-row';
-    li.setAttribute('role', 'option');
-    li.tabIndex = 0;
+    // Deux boutons frères (pas de bouton dans un bouton) : la ligne ouvre la fiche, la pastille change l'affichage.
     li.innerHTML = `
-      <span class="wl-id"><b>${co.ticker}</b><small>${co.name}</small></span>
-      <span class="wl-spark"></span>
+      <button class="wl-main" type="button" aria-label="${co.name} (${co.ticker}) — ouvrir la fiche">
+        <span class="wl-id"><b>${co.ticker}</b><small>${co.name}</small></span>
+        <span class="wl-spark" aria-hidden="true"></span>
+      </button>
       <button class="wl-pill" type="button" title="Changer l’affichage (%, prix, capitalisation)"></button>`;
     li.style.setProperty('--dc', domainById[co.domain].color);
-    li.addEventListener('click', () => onSelect?.(co));
-    li.addEventListener('keydown', (e) => { if (e.key === 'Enter') onSelect?.(co); });
+    li.querySelector('.wl-main').addEventListener('click', () => onSelect?.(co));
     li.querySelector('.wl-pill').addEventListener('click', (e) => {
       e.stopPropagation();
       pillMode = PILL_MODES[(PILL_MODES.indexOf(pillMode) + 1) % PILL_MODES.length];
@@ -71,14 +75,22 @@ export function createWatchlist(el, store, { onSelect } = {}) {
 
   function pillText(q, co) {
     if (pillMode === 'price') return fmtPrice(q.price, q.currency);
-    if (pillMode === 'cap') return fmtCap(co.cap * (q.price / q.prevClose));
+    if (pillMode === 'cap') return fmtCap(capOf(co, q));
     return fmtPct(q.changePct);
   }
 
   function paint(r, flash) {
     const q = store.get(r.co.ticker);
-    r.pill.textContent = pillText(q, r.co);
+    const stale = isStale(store, q);
+    const status = marketStatus(r.co, q);
+    r.pill.textContent = stale && pillMode === 'pct' ? '—' : pillText(q, r.co);
     r.pill.classList.toggle('down', q.changePct < 0);
+    r.pill.classList.toggle('stale', stale);
+    r.pill.setAttribute('aria-label', stale ? `${r.co.ticker} : cours non actualisé` : `${r.co.ticker} : ${r.pill.textContent} — changer l’affichage`);
+    // L'état du marché n'a de sens qu'avec des données réelles (en démo, les cours bougent en permanence).
+    const live = store.mode === 'live';
+    r.li.classList.toggle('closed', live && status !== 'open');
+    r.li.title = stale ? 'Cours non actualisé (aucune source pour cette bourse)' : live && status !== 'open' ? 'Marché fermé' : '';
     const now = performance.now();
     // Mini-courbes : redessinées au plus toutes les 2 s par ligne.
     if (now - r.lastSpark > 2000 && q.history.length > 1) {
@@ -102,7 +114,7 @@ export function createWatchlist(el, store, { onSelect } = {}) {
   function reorder(animate) {
     const sorted = [...rows.values()].sort((a, b) => {
       if (sort === 'name') return a.co.name.localeCompare(b.co.name, 'fr');
-      if (sort === 'cap') return b.co.cap - a.co.cap;
+      if (sort === 'cap') return capOf(b.co, store.get(b.co.ticker)) - capOf(a.co, store.get(a.co.ticker));
       return store.get(b.co.ticker).changePct - store.get(a.co.ticker).changePct;
     });
     const before = new Map();

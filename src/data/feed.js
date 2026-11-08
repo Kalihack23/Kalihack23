@@ -28,6 +28,13 @@ export function createStore() {
       lastTs: 0,
       dir: 0,
       src: null, // 'rt' temps réel | 'api' différé | 'sim' simulé | null référence
+      // Détails de séance (fournis par /api quand Yahoo les donne)
+      open: null,
+      high: null,
+      low: null,
+      volume: null,
+      marketState: null,
+      capUSD: null, // capitalisation réelle convertie en USD
     });
   }
 
@@ -47,10 +54,18 @@ export function createStore() {
     }
   }
 
-  return {
+  // Métadonnées sans nouveau "tick" de prix (pas d'animation déclenchée).
+  function setMeta(ticker, meta) {
+    const q = quotes.get(ticker);
+    if (q) Object.assign(q, meta);
+  }
+
+  const api = {
+    mode: 'demo', // 'demo' (simulé) ou 'live' (données réelles) — via setMode()
     quotes,
     get: (t) => quotes.get(t),
     set,
+    setMeta,
     seedHistory(ticker, arr) {
       const q = quotes.get(ticker);
       if (q) q.history = arr.slice(-HISTORY_MAX);
@@ -59,7 +74,18 @@ export function createStore() {
       listeners.add(fn);
       return () => listeners.delete(fn);
     },
+    // Change de mode et redessine toutes les vues (ex. griser les valeurs non actualisées).
+    setMode(mode) {
+      api.mode = mode;
+      for (const q of quotes.values()) {
+        q.dir = 0;
+        for (const fn of listeners) {
+          try { fn(q); } catch (e) { console.error(e); }
+        }
+      }
+    },
   };
+  return api;
 }
 
 /* ---------- Fournisseur DÉMO : mouvement brownien géométrique corrélé par secteur ---------- */
@@ -105,7 +131,7 @@ export function createSimProvider(store) {
 /* ---------- Fournisseur API : /api/quotes (Yahoo Finance via la fonction serveur) ---------- */
 export async function apiAvailable() {
   try {
-    const res = await fetch('/api/quotes?symbols=NVDA', { cache: 'no-store' });
+    const res = await fetch('/api/quotes?symbols=NVDA', { cache: 'no-store', signal: AbortSignal.timeout(5000) });
     if (!res.ok) return false;
     const json = await res.json();
     return !!json?.quotes?.NVDA?.price;
@@ -120,18 +146,29 @@ export function createApiProvider(store, { companies, intervalMs = 60000, once =
   let timer = null;
   let first = true;
 
+  let stopped = false;
   async function poll() {
-    if (!once) timer = setTimeout(poll, intervalMs);
     try {
-      const res = await fetch(`/api/quotes?symbols=${list.map((c) => encodeURIComponent(c.symbol)).join(',')}`);
+      const res = await fetch(`/api/quotes?symbols=${list.map((c) => encodeURIComponent(c.symbol)).join(',')}`, { signal: AbortSignal.timeout(15000) });
       if (!res.ok) throw new Error(res.status);
-      const { quotes } = await res.json();
+      const { quotes, fx = {} } = await res.json();
       let n = 0;
       for (const sym in quotes) {
         const co = bySymbol[sym];
         const q = quotes[sym];
         if (!co) continue;
         if (first && q.intraday?.length > 1) store.seedHistory(co.ticker, q.intraday);
+        // Haut / bas / ouverture : données Yahoo si présentes, sinon déduits de la courbe de séance.
+        const intra = q.intraday?.length ? q.intraday : null;
+        const rate = fx[q.currency || co.currency];
+        store.setMeta(co.ticker, {
+          open: q.open ?? (intra ? intra[0] : null),
+          high: q.high ?? (intra ? Math.max(...intra) : null),
+          low: q.low ?? (intra ? Math.min(...intra) : null),
+          volume: q.volume ?? null,
+          marketState: q.marketState ?? null,
+          capUSD: q.marketCap && rate ? (q.marketCap * rate) / 1e9 : null,
+        });
         store.set(co.ticker, q.price, q.prevClose, q.time, src);
         n++;
       }
@@ -140,12 +177,14 @@ export function createApiProvider(store, { companies, intervalMs = 60000, once =
     } catch (e) {
       onUpdate?.(0, list.length, e);
     }
+    // Prochain appel planifié après la fin de celui-ci (jamais deux requêtes en parallèle).
+    if (!once && !stopped) timer = setTimeout(poll, intervalMs);
   }
 
   return {
     mode: 'api',
     start() { return poll(); },
-    stop() { clearTimeout(timer); },
+    stop() { stopped = true; clearTimeout(timer); },
   };
 }
 
@@ -164,6 +203,7 @@ export function createFinnhubProvider(store, apiKey, { onStatus, loadQuotes = tr
   async function fetchQuote(symbol) {
     const res = await fetch(
       `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${encodeURIComponent(apiKey)}`,
+      { signal: AbortSignal.timeout(8000) },
     );
     if (res.status === 401 || res.status === 403) throw new Error('auth');
     if (!res.ok) throw new Error(`http ${res.status}`);
@@ -178,6 +218,7 @@ export function createFinnhubProvider(store, apiKey, { onStatus, loadQuotes = tr
         const q = await fetchQuote(co.symbol);
         if (q && q.c > 0) {
           store.seedHistory(co.ticker, [q.pc || q.c, q.o || q.c, q.c]);
+          store.setMeta(co.ticker, { open: q.o || null, high: q.h || null, low: q.l || null });
           store.set(co.ticker, q.c, q.pc, (q.t || 0) * 1000 || Date.now(), 'rt');
         }
       } catch (e) {

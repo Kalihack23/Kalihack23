@@ -1,6 +1,7 @@
-import * as d3 from 'd3';
+import * as d3 from './d3.js';
 
-export const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const hasDOM = typeof window !== 'undefined' && typeof document !== 'undefined';
+export const reducedMotion = hasDOM && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 // Échelles divergentes (couleurs système Apple) rouge → gris → vert, saturées à ±3 %,
 // une par thème (le vert et le rouge d'iOS diffèrent entre mode clair et sombre).
@@ -9,7 +10,7 @@ const SCALES = {
   dark: makeScale(['#ff453a', '#c2524a', '#8e8e93', '#3fa864', '#30d158']),
   light: makeScale(['#ff3b30', '#e0665e', '#aeaeb2', '#5cc777', '#34c759']),
 };
-const isLight = () => document.documentElement.dataset.theme === 'light';
+const isLight = () => hasDOM && document.documentElement.dataset.theme === 'light';
 
 export const colorFor = (pct) => (isLight() ? SCALES.light : SCALES.dark)(pct || 0);
 

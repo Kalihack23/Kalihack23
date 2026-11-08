@@ -37,7 +37,11 @@ Un site interactif qui regroupe les entreprises qui construisent l’intelligenc
 | Clé Finnhub seule (sans `/api`) | Valeurs US en temps réel. Les valeurs internationales restent à leur prix de référence. |
 | Aucune source | **DÉMO** : variations **simulées**, clairement signalées |
 
-Chaque fiche indique la source du cours affiché : *Temps réel*, *Différé*, *Simulé* ou *Prix de référence*. En démo, l’historique est simulé et marqué comme tel.
+Chaque fiche indique la source du cours affiché : *Temps réel*, *Différé*, *Simulé* ou *Prix de référence*. En mode réel, elle indique aussi l’état du marché (ouvert, fermé, pré-ouverture, après clôture). Une valeur sans source est grisée (« — ») et sortie de l’indice. En démo, l’historique est simulé et marqué comme tel.
+
+Une fois déployé, `/api/quotes` fournit aussi, quand Yahoo les donne, les **vraies capitalisations** (converties en USD), l’ouverture, le haut et le bas de séance, le volume et l’état du marché. La taille des bulles et l’indice IA se recalculent alors. Sinon, la capitalisation affichée est une estimation, signalée par « ≈ ».
+
+Les fonctions `/api` n’acceptent que les entreprises du site (elles ne servent pas de proxy ouvert). Les appels vers Yahoo sont groupés, limités dans le temps et mis en cache 60 s.
 
 **Clé Finnhub** (optionnelle, gratuite) : créez-la sur [finnhub.io](https://finnhub.io/register). Collez-la ensuite dans le site (icône ⚙, elle reste dans le navigateur), ou ajoutez-la sur Vercel comme variable d’environnement `VITE_FINNHUB_KEY`. Dans ce second cas, elle sera visible dans le code du site, ce qui est acceptable pour une clé gratuite.
 
@@ -50,6 +54,9 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build    # génère dist/
 npm run preview
+npm test         # tests unitaires (Vitest)
+npm run lint     # vérification du code (ESLint)
+npm run check    # lint + tests + build (lancé automatiquement sur GitHub à chaque push)
 ```
 
 ## Mise en ligne sur Vercel
@@ -58,6 +65,8 @@ npm run preview
 2. *Add New → Project*, importez le dépôt. Vercel détecte Vite tout seul (`vercel.json` est fourni).
 3. Facultatif : dans *Settings → Environment Variables*, ajoutez `VITE_FINNHUB_KEY`.
 4. *Deploy*. Chaque push sur la branche principale redéploie le site. Un nom de domaine perso s’ajoute dans *Settings → Domains*.
+
+L’aperçu lors du partage du lien (`og:image`) utilise automatiquement l’adresse Vercel. Pour un domaine perso, ajoutez la variable `SITE_URL=https://votre-domaine.fr`. Le site s’installe aussi sur l’écran d’accueil d’un téléphone (« Ajouter à l’écran d’accueil »).
 
 En local, `npm run dev` sert aussi les fonctions `/api` (même code que sur Vercel).
 
@@ -69,14 +78,17 @@ src/
   data/companies.js   univers des entreprises et domaines
   data/feed.js        store de cotations + fournisseurs API / Finnhub / DÉMO
   data/history.js     historique et actualités
+  data/markets.js     horaires des bourses (marché ouvert / fermé)
+  data/derived.js     capitalisation réelle ou estimée, valeurs non actualisées
   viz/galaxy.js       visualisation D3 + GSAP (Galaxie ⇄ Orbites)
-  viz/sparkline.js    mini-graphiques
   viz/historyChart.js graphique façon app Bourse (scrubbing) + mini-courbes
   ui/glass.js         composants Liquid Glass (contrôle segmenté, reflets, ressorts)
   ui/theme.js         thème clair / sombre (mémorisé, suit le système)
   ui/watchlist.js     liste de valeurs façon app Bourse
   ui/                 bandeau, panneau, infobulle, classement, réglages, ambiance, partage
   main.js             assemblage
+public/               icônes, manifeste (installation), image d’aperçu og.png
+tests/                tests unitaires (formatage, données, horaires, fonctions /api)
 ```
 
 Stack : Vite, D3 v7, GSAP 3, JavaScript sans framework.

@@ -3,7 +3,7 @@
 //  - échelle de prix à droite, quadrillage très léger, clôture veille en pointillés
 //  - « scrubbing » : on parcourt la courbe au doigt / à la souris ; un callback remonte
 //    le point survolé pour mettre à jour l'en-tête (prix, variation, date), comme sur iOS.
-import * as d3 from 'd3';
+import * as d3 from '../d3.js';
 import { themeColors } from '../util.js';
 
 const fmt = {
@@ -32,7 +32,7 @@ const axisNum = (v) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: M
  * @param {{ currency?: string, baseline?: number, mode?: 'live'|'intraday'|'day', range?: string,
  *           animate?: boolean, onScrub?: (p: {t:number, price:number, i:number}|null) => void }} opts
  */
-export function renderHistoryChart(container, points, { currency, baseline, mode = 'day', range = '1mo', animate = true, onScrub } = {}) {
+export function renderHistoryChart(container, points, { baseline, mode = 'day', range = '1mo', animate = true, onScrub } = {}) {
   container.innerHTML = '';
   if (!points || points.length < 2) {
     container.innerHTML = '<p class="p-empty">Pas assez de données pour le moment.</p>';
@@ -96,7 +96,7 @@ export function renderHistoryChart(container, points, { currency, baseline, mode
   const area = d3.area((_, i) => x(i), H - padB, (p) => y(p[1])).curve(d3.curveMonotoneX);
   const plot = svg.append('g').attr('clip-path', `url(#${clipId})`);
   plot.append('path').attr('d', area(points)).attr('fill', `url(#${id})`);
-  const path = plot.append('path').attr('d', line(points)).attr('fill', 'none').attr('stroke', color)
+  plot.append('path').attr('d', line(points)).attr('fill', 'none').attr('stroke', color)
     .attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round');
 
   // Voile qui assombrit la partie à droite du doigt pendant le scrubbing.

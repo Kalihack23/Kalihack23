@@ -12,6 +12,7 @@ import { createSegmented, initGlass } from './ui/glass.js';
 import { getTheme, onThemeChange, setTheme } from './ui/theme.js';
 import { buildCaption, renderShareImage } from './ui/share.js';
 import { colorFor, fmtCap, fmtPct, reducedMotion } from './util.js';
+import { capOf, isStale } from './data/derived.js';
 
 const $ = (id) => document.getElementById(id);
 const store = createStore();
@@ -33,6 +34,7 @@ function setStatus(mode, text) {
 }
 
 function startDemo(reason) {
+  store.setMode('demo');
   const sim = createSimProvider(store);
   providers.push(sim);
   sim.start();
@@ -45,6 +47,7 @@ async function startFeed() {
   const api = await apiAvailable();
 
   if (!api && !key) return startDemo();
+  store.setMode('live');
 
   if (key) {
     const fh = createFinnhubProvider(store, key, {
@@ -122,6 +125,7 @@ function select(co) {
 }
 
 galaxy = createGalaxy($('viz'), store, {
+  capOf: (co) => capOf(co, store.get(co.ticker)),
   onSelect: select,
   onHover: (co, ev) => tooltip.show(co, ev),
   onLeave: () => tooltip.hide(),
@@ -129,6 +133,17 @@ galaxy = createGalaxy($('viz'), store, {
 });
 
 createTicker($('tape'), store, { onSelect: select });
+
+// Dès que de vraies capitalisations arrivent (Yahoo), on recalcule la taille des bulles.
+let capsKnown = 0;
+let relayoutTimer = null;
+store.subscribe(() => {
+  const n = listed.filter((co) => store.get(co.ticker).capUSD > 0).length;
+  if (n === capsKnown) return;
+  capsKnown = n;
+  clearTimeout(relayoutTimer);
+  relayoutTimer = setTimeout(() => galaxy.relayout(), 800);
+});
 const watchlist = createWatchlist($('watchlist'), store, { onSelect: select });
 
 /* ---------- Filtres ---------- */
@@ -181,7 +196,7 @@ const HINTS = {
   bubbles: 'Taille = variation du jour · attrapez, lancez, faites-les rebondir',
   orbit: 'Chaque orbite est un domaine · survolez une planète',
 };
-createSegmented($('view-seg'), {
+const viewSeg = createSegmented($('view-seg'), {
   label: 'Vue',
   value: 'pack',
   items: [
@@ -206,6 +221,12 @@ createSegmented($('view-seg'), {
   },
 });
 
+// L'onglet « Liste » n'existe que sur mobile : si on agrandit la fenêtre, on revient à la Galaxie.
+const wide = window.matchMedia('(min-width: 761px)');
+wide.addEventListener('change', () => {
+  if (wide.matches && viewSeg.value === 'list') viewSeg.select('pack');
+});
+
 /* ---------- Statistiques globales ---------- */
 const statShown = { index: 0, cap: 0 };
 let lastStats = { index: 0, cap: 0, up: 0, down: 0 };
@@ -213,14 +234,15 @@ function updateStats() {
   let capNow = 0, weighted = 0, capBase = 0, up = 0, down = 0;
   for (const co of listed) {
     const q = store.get(co.ticker);
-    const c = co.cap * (q.price / q.prevClose);
+    const c = capOf(co, q);
     capNow += c;
-    capBase += co.cap;
-    weighted += co.cap * q.changePct;
+    if (isStale(store, q)) continue; // valeur non actualisée : exclue de l'indice et du décompte
+    capBase += c;
+    weighted += c * q.changePct;
     if (q.changePct > 0) up++;
     else if (q.changePct < 0) down++;
   }
-  const index = weighted / capBase;
+  const index = capBase ? weighted / capBase : 0;
   lastStats = { index, cap: capNow, up, down };
   galaxy.setIndex(index);
   gsap.to(statShown, {
@@ -276,7 +298,10 @@ const shareDlg = $('share');
 let shareBlob = null; // Promise<Blob>
 
 function currentMovers() {
-  const rows = listed.map((co) => ({ ticker: co.ticker, pct: store.get(co.ticker).changePct })).sort((a, b) => b.pct - a.pct);
+  const rows = listed
+    .filter((co) => !isStale(store, store.get(co.ticker)))
+    .map((co) => ({ ticker: co.ticker, pct: store.get(co.ticker).changePct }))
+    .sort((a, b) => b.pct - a.pct);
   return { gainers: rows.slice(0, 3), losers: rows.slice(-3).reverse() };
 }
 
@@ -319,9 +344,9 @@ $('share-copy').addEventListener('click', async (e) => {
 $('share-native').addEventListener('click', async () => {
   if (!shareBlob) return;
   const file = new File([await shareBlob], shareFileName(), { type: 'image/png' });
-  const payload = { files: [file], title: 'AI·ORBIT', text: $('share-caption').value };
+  const payload = { files: [file], title: 'AI Orbit', text: $('share-caption').value };
   try {
     if (navigator.canShare?.(payload)) await navigator.share(payload);
-    else await navigator.share({ title: 'AI·ORBIT', text: $('share-caption').value, url: location.href });
+    else await navigator.share({ title: 'AI Orbit', text: $('share-caption').value, url: location.href });
   } catch { /* partage annulé */ }
 });
