@@ -98,9 +98,7 @@ export function createWatchlist(el, store, { onSelect } = {}) {
       r.lastSpark = now;
     }
     if (flash && q.dir && !reducedMotion) {
-      r.pill.classList.remove('flash');
-      void r.pill.offsetWidth;
-      r.pill.classList.add('flash');
+      r.pill.animate([{ filter: 'brightness(1.45)' }, { filter: 'none' }], { duration: 800, easing: 'ease-out' });
     }
   }
 

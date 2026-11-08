@@ -20,6 +20,13 @@ describe('horaires des bourses', () => {
     expect(isOpenLocal(co('TEL'), new Date('2026-11-10T01:00:00Z'))).toBe(true); // 10:00 JST
     expect(isOpenLocal(co('TEL'), new Date('2026-11-10T03:00:00Z'))).toBe(false); // 12:00 JST
   });
+  it('Shanghai (pause méridienne) et Milan', () => {
+    expect(exchangeOf(co('CAMBR')).name).toBe('Bourse de Shanghai');
+    expect(isOpenLocal(co('CAMBR'), new Date('2026-11-10T02:00:00Z'))).toBe(true); // 10:00 Shanghai
+    expect(isOpenLocal(co('CAMBR'), new Date('2026-11-10T04:00:00Z'))).toBe(false); // 12:00 Shanghai
+    expect(exchangeOf(co('PRYSM')).name).toBe('Euronext Milan');
+    expect(isOpenLocal(co('PRYSM'), new Date('2026-11-10T10:00:00Z'))).toBe(true); // 11:00 Rome
+  });
   it("l'état fourni par Yahoo est prioritaire", () => {
     expect(marketStatus(co('NVDA'), { marketState: 'REGULAR' }, new Date('2026-11-14T15:00:00Z'))).toBe('open');
     expect(marketStatus(co('NVDA'), { marketState: 'POST' })).toBe('post');

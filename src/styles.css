@@ -249,13 +249,13 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 .brand-mark circle:first-child { fill: var(--text); }
 .brand-orbit { fill: none; stroke: var(--flat); stroke-width: 1.4; }
 .brand-moon { fill: var(--up); transform-origin: 20px 20px; animation: spin 8s linear infinite; }
-.brand h1 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
-.tagline { margin: 1px 0 0; font-size: 12px; color: var(--text-2); }
+.brand h1 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; }
+.tagline { margin: 1px 0 0; font-size: 12px; color: var(--text-2); white-space: nowrap; }
 
 .stats { display: flex; gap: 28px; margin-left: auto; }
 .stat { display: flex; flex-direction: column; gap: 1px; }
-.stat-label { font-size: 11px; font-weight: 500; color: var(--text-2); }
-.stat-value { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+.stat-label { font-size: 11px; font-weight: 500; color: var(--text-2); white-space: nowrap; }
+.stat-value { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; }
 .up { color: var(--up); }
 .down { color: var(--down); }
 
@@ -377,8 +377,6 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 .tape-item b { color: var(--text); font-weight: 600; }
 .tape-item .px { color: var(--text-2); }
 .tape-item .pct { font-weight: 500; transition: color 0.4s; }
-.tape-item.flash-up { animation: flashUp 0.9s; }
-.tape-item.flash-down { animation: flashDown 0.9s; }
 
 /* ---------------- Filtres ---------------- */
 .filters { display: flex; align-items: center; gap: 14px; padding: 12px 22px 6px; }
@@ -436,7 +434,7 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 .domain-ring { fill: var(--ring-fill); stroke-width: 1; cursor: zoom-in; transition: fill 0.4s; }
 .domain-ring:hover { fill: var(--fill-1); }
 .domain-ring.orbit { fill: none; cursor: default; }
-.domain-dash { fill: none; stroke-width: 1; stroke-dasharray: 1.5 9; opacity: 0.35; pointer-events: none; animation: dash 40s linear infinite; }
+.domain-dash { fill: none; stroke-width: 1; stroke-dasharray: 1.5 9; opacity: 0.35; pointer-events: none; }
 .domain-label {
   font-size: 12px;
   font-weight: 600;
@@ -697,8 +695,6 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 }
 .wl-pill.down { background: var(--down); }
 .wl-pill.stale { background: var(--fill-2); color: var(--text-2); }
-.wl-pill.flash { animation: pillFlash 0.8s ease-out; }
-@keyframes pillFlash { 0% { filter: brightness(1.45); } 100% { filter: none; } }
 .seg-item.mobile-only { display: none; }
 
 /* ---------------- Fenêtres (réglages, partage) ---------------- */
@@ -769,8 +765,6 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
   0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--up) 60%, transparent); }
   100% { box-shadow: 0 0 0 9px transparent; }
 }
-@keyframes flashUp { 0% { background: color-mix(in srgb, var(--up) 20%, transparent); } 100% { background: transparent; } }
-@keyframes flashDown { 0% { background: color-mix(in srgb, var(--down) 20%, transparent); } 100% { background: transparent; } }
 @keyframes pop { from { opacity: 0; transform: scale(0.92) translateY(14px); } }
 
 @media (prefers-reduced-motion: reduce) {
@@ -778,13 +772,23 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 }
 
 /* ---------------- Responsive ---------------- */
+/* Écrans moyens : en-tête compact pour que chaque statistique tienne sur une ligne */
+@media (max-width: 1400px) {
+  .topbar { gap: 18px; }
+  .stats { gap: 20px; }
+  .stat-value { font-size: 17px; }
+  .status #status-text { max-width: 170px; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: bottom; }
+}
+@media (max-width: 1300px) {
+  .tagline { display: none; }
+}
 @media (max-width: 1150px) {
   .stats { gap: 16px; }
   .tagline { display: none; }
   .stage { grid-template-columns: 280px minmax(0, 1fr); }
   .stat-label, .stat-value { white-space: nowrap; }
   .status { padding: 8px 10px; }
-  .status #status-text { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+  .status #status-text { max-width: 110px; }
 }
 /* Tablette : la barre passe sur deux lignes (marque + actions, puis statistiques) */
 @media (min-width: 761px) and (max-width: 1150px) {

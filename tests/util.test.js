@@ -12,14 +12,15 @@ describe('formatage', () => {
     expect(fmtPrice(0)).toBe('—');
   });
   it('variation signée avec le vrai signe moins', () => {
-    expect(fmtPct(1.234)).toBe('+1,23 %');
-    expect(fmtPct(-0.5)).toBe('−0,50 %');
-    expect(fmtPct(0)).toBe('+0,00 %');
+    expect(nb(fmtPct(1.234))).toBe('+1,23 %');
+    expect(nb(fmtPct(-0.5))).toBe('−0,50 %');
+    expect(nb(fmtPct(0))).toBe('+0,00 %');
+    expect(fmtPct(1.07)).not.toMatch(/ /); // aucun espace sécable
   });
   it('capitalisation en Md$ / T$', () => {
-    expect(fmtCap(4500)).toBe('4,50 T$');
-    expect(fmtCap(28)).toBe('28 Md$');
-    expect(fmtCap(0.5)).toBe('500 M$');
+    expect(nb(fmtCap(4500))).toBe('4,50 T$');
+    expect(nb(fmtCap(28))).toBe('28 Md$');
+    expect(nb(fmtCap(0.5))).toBe('500 M$');
   });
   it('couleur : rouge en baisse, vert en hausse, saturée à ±3 %', () => {
     expect(colorFor(-10)).toBe(colorFor(-3));

@@ -9,7 +9,7 @@ import { createSegmented } from './glass.js';
 import { onThemeChange } from './theme.js';
 import { arrow, colorFor, fmtCap, fmtPct, fmtPrice, reducedMotion } from '../util.js';
 
-const COUNTRY = { US: 'États-Unis', TW: 'Taïwan', NL: 'Pays-Bas', GB: 'Royaume-Uni', IE: 'Irlande', DE: 'Allemagne', CH: 'Suisse', FR: 'France', KR: 'Corée du Sud', JP: 'Japon', CN: 'Chine', IN: 'Inde' };
+const COUNTRY = { US: 'États-Unis', TW: 'Taïwan', NL: 'Pays-Bas', GB: 'Royaume-Uni', IE: 'Irlande', DE: 'Allemagne', CH: 'Suisse', FR: 'France', KR: 'Corée du Sud', JP: 'Japon', CN: 'Chine', IN: 'Inde', CA: 'Canada', AU: 'Australie', IL: 'Israël', IT: 'Italie' };
 
 export function createTooltip(el, store) {
   let current = null;

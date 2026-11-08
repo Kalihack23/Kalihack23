@@ -10,6 +10,8 @@ const EXCHANGES = {
   KS: { name: 'KRX Séoul', tz: 'Asia/Seoul', sessions: [[9, 15.5]] },
   HK: { name: 'HKEX', tz: 'Asia/Hong_Kong', sessions: [[9.5, 12], [13, 16]] },
   TW: { name: 'TWSE Taïwan', tz: 'Asia/Taipei', sessions: [[9, 13.5]] },
+  SS: { name: 'Bourse de Shanghai', tz: 'Asia/Shanghai', sessions: [[9.5, 11.5], [13, 15]] },
+  MI: { name: 'Euronext Milan', tz: 'Europe/Rome', sessions: [[9, 17.5]] },
 };
 
 export function exchangeOf(co) {

@@ -1,6 +1,6 @@
 // Bandeau défilant des cours (contenu dupliqué pour une boucle sans couture).
 import { COMPANIES } from '../data/companies.js';
-import { arrow, colorFor, fmtPct, fmtPrice } from '../util.js';
+import { arrow, colorFor, fmtPct, fmtPrice, reducedMotion } from '../util.js';
 import { isStale } from '../data/derived.js';
 import { onThemeChange } from './theme.js';
 
@@ -30,10 +30,12 @@ export function createTicker(el, store, { onSelect } = {}) {
       const stale = isStale(store, q);
       pct.textContent = stale ? '—' : `${arrow(q.changePct)} ${fmtPct(q.changePct)}`;
       pct.style.color = stale ? 'var(--text-3)' : colorFor(q.changePct * 2);
-      if (flash && q.dir) {
-        node.classList.remove('flash-up', 'flash-down');
-        void node.offsetWidth;
-        node.classList.add(q.dir > 0 ? 'flash-up' : 'flash-down');
+      // Flash via Web Animations : pas de recalcul de mise en page forcé (offsetWidth) à chaque cotation.
+      if (flash && q.dir && !reducedMotion && node.isConnected) {
+        node.animate(
+          [{ backgroundColor: `color-mix(in srgb, var(${q.dir > 0 ? '--up' : '--down'}) 20%, transparent)` }, { backgroundColor: 'transparent' }],
+          { duration: 900, easing: 'ease-out' },
+        );
       }
     }
   }

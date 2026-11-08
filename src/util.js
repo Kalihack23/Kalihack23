@@ -58,11 +58,12 @@ function priceFormatter(currency) {
 }
 
 export const fmtPrice = (p, currency = 'USD') => (p > 0 ? priceFormatter(currency).format(p) : '—');
-export const fmtPct = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2).replace('.', ',')} %`;
+// Espaces insécables (\u00a0) : « 1,07 % » ou « 36,90 T$ » ne se coupent jamais en deux lignes.
+export const fmtPct = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2).replace('.', ',')}\u00a0%`;
 export const arrow = (v) => (v > 0 ? '▲' : v < 0 ? '▼' : '•');
 
 export function fmtCap(billions) {
-  if (billions >= 1000) return `${(billions / 1000).toFixed(2).replace('.', ',')} T$`;
-  if (billions >= 1) return `${Math.round(billions)} Md$`;
-  return `${Math.round(billions * 1000)} M$`;
+  if (billions >= 1000) return `${(billions / 1000).toFixed(2).replace('.', ',')}\u00a0T$`;
+  if (billions >= 1) return `${Math.round(billions)}\u00a0Md$`;
+  return `${Math.round(billions * 1000)}\u00a0M$`;
 }

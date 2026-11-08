@@ -6,7 +6,7 @@ import { FX_SYMBOLS, details, isAllowedSymbol, params, send, spark } from './_li
 export default async function handler(req, res) {
   const symbols = [...new Set((params(req).get('symbols') || '').split(',').map((s) => s.trim()))]
     .filter((s) => isAllowedSymbol(s) && !s.endsWith('=X'))
-    .slice(0, 120);
+    .slice(0, 220);
   if (!symbols.length) return send(res, 400, { error: 'symboles manquants ou non autorisés' });
 
   const [prices, extra] = await Promise.all([spark([...symbols, ...FX_SYMBOLS]), details(symbols)]);

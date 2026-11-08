@@ -9,7 +9,7 @@ import { COMPANIES, DOMAINS } from '../data/companies.js';
 import { colorFor, fmtCap, fmtPct, reducedMotion, themeColors } from '../util.js';
 import { onThemeChange } from '../ui/theme.js';
 
-const ORBIT_ORDER = ['private', 'robotics', 'data', 'infra', 'cloud', 'software', 'chips'];
+const ORBIT_ORDER = ['private', 'robotics', 'data', 'datacenters', 'energy', 'hardware', 'cloud', 'software', 'chips'];
 const lerp = (a, b, t) => a + (b - a) * t;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
@@ -429,7 +429,8 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
     if (!listed.length) return;
     const weight = (n) => 0.35 + Math.min(Math.abs(n.pct), 12);
     const total = d3.sum(listed, weight);
-    const k = Math.sqrt((W * H * (Math.min(W, H) < 420 ? 0.3 : Math.min(W, H) < 600 ? 0.36 : 0.42)) / (Math.PI * total));
+    const dense = listed.length > 120 ? 0.92 : 1;
+    const k = Math.sqrt((W * H * dense * (Math.min(W, H) < 420 ? 0.3 : Math.min(W, H) < 600 ? 0.36 : 0.42)) / (Math.PI * total));
     const maxR = Math.min(W, H) * 0.2;
     for (const n of nodes) {
       const r = n.co.listed ? clamp(k * Math.sqrt(weight(n)), Math.min(W, H) < 420 ? 4 : 6, maxR) : 0;
@@ -621,21 +622,28 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
       const r = Math.max(0, lerp(pr, d.orbit.R, e) * d.vis * d.s);
       const ringOp = d.vis * Math.max(e, 1 - b);
       d.cur = { x, y, r };
-      d.el.g.style.opacity = ringOp.toFixed(3);
-      d.el.g.style.pointerEvents = ringOp > 0.3 ? '' : 'none';
+      const op = ringOp.toFixed(3);
+      if (op !== d.lastOp) { d.el.g.style.opacity = op; d.el.g.style.pointerEvents = ringOp > 0.3 ? '' : 'none'; d.lastOp = op; }
       if (ringOp < 0.01) continue;
-      d.el.ring.setAttribute('cx', x);
-      d.el.ring.setAttribute('cy', y);
-      d.el.ring.setAttribute('r', r);
-      d.el.ring.setAttribute('stroke-opacity', (0.28 + d.hl * 0.45).toFixed(3));
-      d.el.dash.setAttribute('cx', x);
-      d.el.dash.setAttribute('cy', y);
-      d.el.dash.setAttribute('r', r + 5);
-      const lr = r + 9;
-      d.el.arc.setAttribute('d', `M${x - lr},${y} A${lr},${lr} 0 0 1 ${x + lr},${y}`);
+      // On ne réécrit le DOM que si l'anneau a bougé (évite de repeindre de grandes surfaces à chaque image).
+      const key = `${x.toFixed(1)}|${y.toFixed(1)}|${r.toFixed(1)}`;
+      if (key !== d.lastKey) {
+        d.lastKey = key;
+        d.el.ring.setAttribute('cx', x);
+        d.el.ring.setAttribute('cy', y);
+        d.el.ring.setAttribute('r', r);
+        d.el.dash.setAttribute('cx', x);
+        d.el.dash.setAttribute('cy', y);
+        d.el.dash.setAttribute('r', r + 5);
+        const lr = r + 9;
+        d.el.arc.setAttribute('d', `M${x - lr},${y} A${lr},${lr} 0 0 1 ${x + lr},${y}`);
+        d.el.label.style.fontSize = `${clamp(r / 14, 9, 13)}px`;
+      }
+      const so = (0.28 + d.hl * 0.45).toFixed(3);
+      if (so !== d.lastSo) { d.el.ring.setAttribute('stroke-opacity', so); d.lastSo = so; }
       const lblOp = state.zoomed && e < 0.5 ? (state.zoomed === d ? 1 : 0.15) : 1;
-      d.el.label.style.opacity = (lblOp * clamp(r / 40, 0, 1)).toFixed(3);
-      d.el.label.style.fontSize = `${clamp(r / 14, 9, 13)}px`;
+      const lo = (lblOp * clamp(r / 40, 0, 1)).toFixed(3);
+      if (lo !== d.lastLo) { d.el.label.style.opacity = lo; d.lastLo = lo; }
       // Petit anneau : nom court (évite que les étiquettes se chevauchent sur mobile).
       const lbl = r < 95 ? d.short : d.name;
       if (lbl !== d.lastLabel) { d.el.labelPath.textContent = lbl; d.lastLabel = lbl; }
@@ -665,27 +673,35 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
       n.el.body.setAttribute('r', rs);
       n.el.shine.setAttribute('r', rs);
 
-      // Halo lumineux pour les fortes variations (surtout en mode Bulles).
+      // Halo lumineux pour les fortes variations (mode Bulles) — masqué (aucun coût) quand invisible.
       const big = Math.min(1, Math.abs(n.pct) / 4);
-      const glowOp = n.co.listed ? 0.22 * b * (1 - e) * big : 0; // halo : mode Bulles uniquement
-      n.el.glow.setAttribute('r', (r + 2 + Math.min(r * 0.12, 6) * big).toFixed(2));
-      n.el.glow.setAttribute('fill-opacity', glowOp.toFixed(3));
+      const glowOp = n.co.listed ? 0.22 * b * (1 - e) * big : 0;
+      if (glowOp > 0.005) {
+        if (n.glowHidden !== false) { n.el.glow.style.display = ''; n.glowHidden = false; }
+        n.el.glow.setAttribute('r', (r + 2 + Math.min(r * 0.12, 6) * big).toFixed(2));
+        n.el.glow.setAttribute('fill-opacity', glowOp.toFixed(3));
+      } else if (n.glowHidden !== true) { n.el.glow.style.display = 'none'; n.glowHidden = true; }
 
+      // Anneau de sélection / recherche — idem.
       const haloOp = Math.max(n.hl, n.sel ? 1 : 0);
-      n.el.halo.setAttribute('r', (r + 4 + Math.sin(time * 4) * 1.5).toFixed(2));
-      n.el.halo.setAttribute('stroke', n.sel ? '#ffffff' : n.dom.color);
-      n.el.halo.setAttribute('stroke-opacity', (haloOp * 0.9).toFixed(3));
+      if (haloOp > 0.005) {
+        if (n.haloHidden !== false) { n.el.halo.style.display = ''; n.haloHidden = false; }
+        n.el.halo.setAttribute('r', (r + 4 + Math.sin(time * 4) * 1.5).toFixed(2));
+        n.el.halo.setAttribute('stroke', n.sel ? themeColors().text : n.dom.color);
+        n.el.halo.setAttribute('stroke-opacity', (haloOp * 0.9).toFixed(3));
+      } else if (n.haloHidden !== true) { n.el.halo.style.display = 'none'; n.haloHidden = true; }
 
+      // Onde à chaque nouveau cours — idem.
       if (n.rip < 1) {
+        if (n.ripHidden !== false) { n.el.ripple.style.display = ''; n.ripHidden = false; }
         n.el.ripple.setAttribute('r', (r * (1 + n.rip * 0.35) + 2 + n.rip * 6).toFixed(2));
         n.el.ripple.style.opacity = ((1 - n.rip) * 0.7).toFixed(3);
-      } else if (n.el.ripple.style.opacity !== '0') {
-        n.el.ripple.style.opacity = '0';
-      }
+      } else if (n.ripHidden !== true) { n.el.ripple.style.display = 'none'; n.ripHidden = true; }
 
       const fs = clamp(r * 0.36, 8, 26);
-      const showTk = r > 13;
-      const showPc = r > 22;
+      const small = Math.min(W, H) < 500;
+      const showTk = r > (small ? 15 : 13);
+      const showPc = r > (small ? 26 : 22);
       const tk = showTk ? (n.co.ticker.length > 6 ? n.co.name.split(' ')[0] : n.co.ticker) : '';
       const pc = showPc ? (n.co.listed ? fmtPct(n.pct) : fmtCap(n.co.cap)) : '';
       if (tk !== n.last.tk) { n.el.tk.textContent = tk; n.last.tk = tk; }
@@ -725,7 +741,9 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
     }
     const tl = gsap.timeline({ delay: 0.2 });
     tl.to(domains, { s: 1, duration: 1.4, ease: 'expo.out', stagger: 0.09 });
-    tl.to(nodes, { s: 1, duration: 1.2, ease: 'elastic.out(1, 0.55)', stagger: { each: 0.016, from: 'random' } }, 0.35);
+    // Les plus grosses capitalisations apparaissent d'abord ; durée totale bornée (~1,3 s) quel que soit le nombre de valeurs.
+    const order = [...nodes].sort((a, b) => b.co.cap - a.co.cap);
+    tl.to(order, { s: 1, duration: 1.1, ease: 'elastic.out(1, 0.55)', stagger: { each: Math.min(0.016, 1.3 / order.length) } }, 0.35);
   }
 
   svgEl.dataset.mode = 'pack';

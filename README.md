@@ -2,17 +2,19 @@
 
 Un site interactif qui regroupe les entreprises qui construisent l’intelligence artificielle, classées par domaine, avec leurs cours en temps réel et un motion design en cercles.
 
-**Environ 70 entreprises cotées + 5 laboratoires privés**, aux États-Unis, en Europe et en Asie :
+**146 entreprises cotées + 11 laboratoires privés**, aux États-Unis, en Europe et en Asie. Le site couvre tout ce qui touche à l'IA, de près ou de loin, réparti en 9 domaines :
 
 | Domaine | Exemples |
 | --- | --- |
-| Puces & Semi-conducteurs | NVIDIA, TSMC, Broadcom, ASML, Samsung, SK Hynix, Tokyo Electron, Infineon, STMicro… |
-| Infrastructure & Énergie | Arista, Vertiv, Schneider Electric, Siemens, Hitachi, Legrand, Constellation… |
-| Cloud & Hyperscalers | Microsoft, Alphabet, Amazon, Oracle, Alibaba, Tencent, OVHcloud, CoreWeave… |
-| Logiciel & Modèles | Meta, Palantir, SAP, Capgemini, Dassault Systèmes, SoftBank, Infosys… |
-| Données & Cybersécurité | CrowdStrike, Palo Alto, Cloudflare, Datadog, MongoDB |
-| Robotique & Edge | Tesla, Apple, Fanuc, Keyence, ABB, Xiaomi, Intuitive Surgical… |
-| Laboratoires privés | OpenAI, Anthropic, xAI, Databricks, Mistral (valorisation, non cotés) |
+| Puces & Semi-conducteurs | NVIDIA, TSMC, Broadcom, ASML, Samsung, SK Hynix, Synopsys, Cadence, Tokyo Electron, Disco, SMIC, Cambricon… |
+| Serveurs, Réseau & Stockage | Dell, HPE, Foxconn, Quanta, Super Micro, Arista, Corning, Coherent, Credo, Astera Labs, Amphenol, Western Digital, Seagate… |
+| Énergie & Électricité | **Caterpillar**, GE Vernova, Siemens Energy, Schneider, Eaton, Vertiv, Constellation, Vistra, Cameco, Oklo, Prysmian… |
+| Datacenters | Equinix, Digital Realty, Iron Mountain, Applied Digital, IREN, Core Scientific… |
+| Cloud & Hyperscalers | Microsoft, Alphabet, Amazon, Oracle, CoreWeave, Nebius, Alibaba, Tencent, OVHcloud… |
+| Logiciel & Modèles | Meta, Palantir, SAP, Salesforce, AppLovin, Shopify, Capgemini, SoftBank… |
+| Données & Cybersécurité | CrowdStrike, Palo Alto, Zscaler, Fortinet, Cloudflare, Datadog, MongoDB… |
+| Robotique & Edge | Tesla, Apple, Intuitive Surgical, Fanuc, ABB, Rockwell, Mobileye, Xiaomi… |
+| Laboratoires privés | OpenAI, Anthropic, xAI, Databricks, Mistral, Perplexity, SSI, Figure AI, Scale AI… (valorisations estimées, non cotés) |
 
 ## Fonctionnalités
 
