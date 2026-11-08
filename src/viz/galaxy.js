@@ -669,9 +669,12 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
         continue;
       }
       if (n.el.g.style.display === 'none') n.el.g.style.display = '';
-      const rs = r.toFixed(2);
-      n.el.body.setAttribute('r', rs);
-      n.el.shine.setAttribute('r', rs);
+      const rs = r.toFixed(1);
+      if (rs !== n.last.r) {
+        n.last.r = rs;
+        n.el.body.setAttribute('r', rs);
+        n.el.shine.setAttribute('r', rs);
+      }
 
       // Halo lumineux pour les fortes variations (mode Bulles) — masqué (aucun coût) quand invisible.
       const big = Math.min(1, Math.abs(n.pct) / 4);
@@ -706,13 +709,18 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
       const pc = showPc ? (n.co.listed ? fmtPct(n.pct) : fmtCap(n.co.cap)) : '';
       if (tk !== n.last.tk) { n.el.tk.textContent = tk; n.last.tk = tk; }
       if (pc !== n.last.pc) { n.el.pc.textContent = pc; n.last.pc = pc; }
-      if (showTk) {
-        n.el.tk.setAttribute('font-size', fs.toFixed(1));
-        n.el.tk.setAttribute('y', (showPc ? -fs * 0.08 : fs * 0.35).toFixed(1));
-      }
-      if (showPc) {
-        n.el.pc.setAttribute('font-size', (fs * 0.66).toFixed(1));
-        n.el.pc.setAttribute('y', (fs * 0.85).toFixed(1));
+      // Taille des libellés : réécrite seulement si elle change visiblement (évite ~600 écritures DOM par image).
+      const fsKey = showTk ? `${(Math.round(fs * 2) / 2).toFixed(1)}|${showPc ? 1 : 0}` : '';
+      if (fsKey !== n.last.fs) {
+        n.last.fs = fsKey;
+        if (showTk) {
+          n.el.tk.setAttribute('font-size', fs.toFixed(1));
+          n.el.tk.setAttribute('y', (showPc ? -fs * 0.08 : fs * 0.35).toFixed(1));
+        }
+        if (showPc) {
+          n.el.pc.setAttribute('font-size', (fs * 0.66).toFixed(1));
+          n.el.pc.setAttribute('y', (fs * 0.85).toFixed(1));
+        }
       }
     }
 

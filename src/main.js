@@ -11,6 +11,7 @@ import { createAmbient } from './ui/ambient.js';
 import { createSegmented, initGlass } from './ui/glass.js';
 import { getTheme, onThemeChange, setTheme } from './ui/theme.js';
 import { buildCaption, renderShareImage } from './ui/share.js';
+import { createChat } from './ui/chat.js';
 import { colorFor, fmtCap, fmtPct, reducedMotion } from './util.js';
 import { capOf, isStale } from './data/derived.js';
 
@@ -146,6 +147,15 @@ store.subscribe(() => {
 });
 const watchlist = createWatchlist($('watchlist'), store, { onSelect: select });
 
+/* ---------- Chatbot « Orbit » ---------- */
+createChat({
+  fab: $('chat-open'),
+  el: $('chat'),
+  store,
+  onSelect: select,
+  getFocus: () => panel.current,
+});
+
 /* ---------- Filtres ---------- */
 const active = new Set(DOMAINS.map((d) => d.id));
 const chipsEl = $('chips');
@@ -209,17 +219,27 @@ const viewSeg = createSegmented($('view-seg'), {
     document.body.dataset.view = mode;
     if (mode === 'list') return; // mobile : la liste de valeurs remplace la scène
     galaxy.setMode(mode);
-    const hint = $('hint');
-    gsap.to(hint, {
-      opacity: 0,
-      duration: reducedMotion ? 0 : 0.2,
-      onComplete: () => {
-        hint.textContent = HINTS[mode];
-        gsap.to(hint, { opacity: 1, duration: reducedMotion ? 0 : 0.4, ease: 'power3.out' });
-      },
-    });
+    showHint(HINTS[mode]);
   },
 });
+
+// Astuce éphémère : affichée quelques secondes au démarrage et à chaque changement de vue, puis s'efface.
+let hintTimer = null;
+function showHint(text) {
+  const hint = $('hint');
+  clearTimeout(hintTimer);
+  gsap.killTweensOf(hint);
+  gsap.to(hint, {
+    opacity: 0,
+    duration: reducedMotion ? 0 : 0.2,
+    onComplete: () => {
+      hint.textContent = text;
+      gsap.to(hint, { opacity: 1, duration: reducedMotion ? 0 : 0.4, ease: 'power3.out' });
+      hintTimer = setTimeout(() => gsap.to(hint, { opacity: 0, duration: reducedMotion ? 0 : 0.8, ease: 'power2.out' }), 6000);
+    },
+  });
+}
+showHint(HINTS.pack);
 
 // L'onglet « Liste » n'existe que sur mobile : si on agrandit la fenêtre, on revient à la Galaxie.
 const wide = window.matchMedia('(min-width: 761px)');
@@ -290,7 +310,7 @@ if (!reducedMotion) {
   gsap.from('.topbar', { y: -40, opacity: 0, duration: 1, ease: 'expo.out' });
   gsap.from('.tape', { opacity: 0, duration: 1, delay: 0.3 });
   gsap.from('#chips, .search, #view-seg', { y: 12, opacity: 0, duration: 0.7, stagger: 0.05, delay: 0.4, ease: 'power3.out' });
-  gsap.from('.watchlist, .legend', { y: 30, opacity: 0, duration: 1, delay: 1.2, ease: 'expo.out' });
+  gsap.from('.watchlist, .chat-fab', { y: 30, opacity: 0, duration: 1, delay: 1.2, ease: 'expo.out' });
 }
 
 /* ---------- Partage ---------- */

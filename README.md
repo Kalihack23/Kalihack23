@@ -25,6 +25,7 @@ Un site interactif qui regroupe les entreprises qui construisent l’intelligenc
 - **Motion design** : une onde à chaque nouveau cours, des couleurs et des compteurs animés, un classement des hausses et baisses qui se réordonne en glissant, un fond d’ambiance lumineux.
 - **Liste de valeurs façon app Bourse d’Apple** : symbole, nom, mini-courbe de séance, et **pastille verte ou rouge**. Toucher une pastille fait passer l’affichage de la variation au prix, puis à la capitalisation. Tri par variation, capitalisation ou A–Z, avec une animation de réordonnancement. Sur mobile, c’est l’onglet « Liste ».
 - **Fiche entreprise façon app Bourse** : symbole, prix dans sa devise, variation en valeur et en %, périodes **1J · 1S · 1M · 6M · 1A**. Le graphique a une échelle à droite, un quadrillage léger et la clôture de la veille en pointillés. **En parcourant la courbe au doigt, le prix, la variation et la date de l’en-tête se mettent à jour**. Suivent un tableau de statistiques (clôture veille, haut et bas de séance, capitalisation, volatilité, place de cotation…), une section « À propos » et les **actualités**.
+- **Chatbot « Orbit »** : le bouton « Demander à Orbit », en bas à droite, ouvre une discussion sur les entreprises du site (cours, rôle dans l’IA, comparaisons, actualité). Relié à **Perplexity**, il cite ses sources, ses réponses s’affichent au fil de l’eau, et les symboles cités ouvrent la fiche. Sans clé Perplexity, un assistant local répond aux questions courantes à partir des données du site.
 - **Partager** : génère une **image 1080×1350** (format Instagram, TikTok ou X) du tableau de bord, avec l’indice IA et le top 3 des hausses et des baisses. Une **légende est prête à poster**. Sur mobile, le bouton ouvre le partage natif.
 - **Thème clair ou sombre** : se choisit avec le bouton soleil/lune (révélation circulaire, comme sur macOS) ou dans les Réglages. Le choix est mémorisé. À la première visite, le site suit le réglage de l'appareil. Le thème clair reprend le mode clair d'iOS, et l'image de partage suit le thème actif.
 - **Bulles vivantes** : dans chaque domaine, les bulles tournent lentement autour du centre, dérivent et « respirent ». Elles s'écartent quand la souris passe, puis reviennent avec un ressort. Sur iPhone et iPad, elles glissent selon l'inclinaison de l'appareil (gyroscope), en parallaxe : les petites bulles bougent plus que les grandes.
@@ -61,6 +62,14 @@ npm run lint     # vérification du code (ESLint)
 npm run check    # lint + tests + build (lancé automatiquement sur GitHub à chaque push)
 ```
 
+## Chatbot : relier Perplexity
+
+1. Créez une clé sur [perplexity.ai/settings/api](https://www.perplexity.ai/settings/api) (facturation à l’usage).
+2. Sur Vercel : *Settings → Environment Variables*, ajoutez `PERPLEXITY_API_KEY` avec cette clé. Facultatif : `PERPLEXITY_MODEL` (par défaut `sonar-pro` ; `sonar` coûte moins cher).
+3. Redéployez (*Deployments → … → Redeploy*).
+
+La clé reste côté serveur (fonction `/api/chat`) et n’est jamais envoyée au navigateur. Pour limiter les coûts, chaque question fait 600 caractères au maximum, la conversation est limitée à 10 messages, chaque réponse à environ 700 jetons, et chaque visiteur à 8 questions par minute.
+
 ## Mise en ligne sur Vercel
 
 1. Créez un compte sur [vercel.com](https://vercel.com) avec votre GitHub.
@@ -75,18 +84,20 @@ En local, `npm run dev` sert aussi les fonctions `/api` (même code que sur Verc
 ## Structure
 
 ```
-api/                  fonctions serveur Vercel : quotes, history, news (Yahoo Finance)
+api/                  fonctions serveur Vercel : quotes, history, news (Yahoo Finance), chat (Perplexity)
 src/
   data/companies.js   univers des entreprises et domaines
   data/feed.js        store de cotations + fournisseurs API / Finnhub / DÉMO
   data/history.js     historique et actualités
   data/markets.js     horaires des bourses (marché ouvert / fermé)
   data/derived.js     capitalisation réelle ou estimée, valeurs non actualisées
+  data/assistant.js   assistant local du chatbot (sans clé)
   viz/galaxy.js       visualisation D3 + GSAP (Galaxie ⇄ Orbites)
   viz/historyChart.js graphique façon app Bourse (scrubbing) + mini-courbes
   ui/glass.js         composants Liquid Glass (contrôle segmenté, reflets, ressorts)
   ui/theme.js         thème clair / sombre (mémorisé, suit le système)
   ui/watchlist.js     liste de valeurs façon app Bourse
+  ui/chat.js          chatbot « Orbit » (interface, flux Perplexity, Markdown sûr)
   ui/                 bandeau, panneau, infobulle, classement, réglages, ambiance, partage
   main.js             assemblage
 public/               icônes, manifeste (installation), image d’aperçu og.png

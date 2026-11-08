@@ -107,11 +107,38 @@
       <div class="canvas">
         <svg id="viz" role="group" aria-label="Carte interactive des entreprises de l’IA (chaque bulle s’ouvre avec Entrée)"></svg>
         <p class="hint glass" id="hint">Attrapez et lancez les bulles · cliquez sur un domaine pour zoomer</p>
-        <div class="legend glass" aria-hidden="true">
-          <span>-3 %</span><i class="legend-bar"></i><span>+3 %</span>
-        </div>
       </div>
     </main>
+
+    <!-- Chatbot « Orbit » (remplace la légende des couleurs) -->
+    <button class="chat-fab glass" id="chat-open" type="button" aria-controls="chat" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3Z" /><path d="M18.5 14.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8Z" /></svg>
+      <span>Demander à Orbit</span>
+    </button>
+    <section class="chat glass" id="chat" aria-label="Orbit, l’assistant des entreprises de l’IA">
+      <span class="grabber" aria-hidden="true"></span>
+      <header class="chat-head">
+        <span class="chat-avatar" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3Z" /></svg>
+        </span>
+        <div>
+          <h2>Orbit</h2>
+          <p>Questions sur les entreprises de l’IA <span class="chat-mode" id="chat-mode"></span></p>
+        </div>
+        <button class="chat-close glass" id="chat-close" type="button" aria-label="Fermer le chat">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </header>
+      <div class="chat-log" id="chat-log" role="log" aria-live="polite"></div>
+      <div class="chat-suggest" id="chat-suggest"></div>
+      <form class="chat-form" id="chat-form">
+        <textarea id="chat-input" rows="1" maxlength="600" placeholder="Ex. : Pourquoi NVIDIA monte ?" aria-label="Votre question"></textarea>
+        <button class="chat-send" id="chat-send" type="submit" aria-label="Envoyer">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5" /></svg>
+        </button>
+      </form>
+      <p class="chat-note">Informations, pas un conseil en investissement.</p>
+    </section>
 
     <!-- Infobulle purement visuelle (les mêmes infos sont dans la fiche et la liste) -->
     <div class="tooltip glass" id="tooltip" aria-hidden="true"></div>

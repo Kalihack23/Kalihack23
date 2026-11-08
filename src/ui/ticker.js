@@ -40,6 +40,18 @@ export function createTicker(el, store, { onSelect } = {}) {
     }
   }
 
+  // Vitesse constante façon bandeau de Wall Street (~55 px/s, 40 sur mobile), quelle que soit la longueur.
+  const tape = el.parentElement;
+  function setSpeed() {
+    const half = el.scrollWidth / 2;
+    if (!half) return;
+    const pxPerSec = window.innerWidth < 760 ? 40 : 55;
+    el.style.animationDuration = `${(half / pxPerSec).toFixed(1)}s`;
+  }
+  new ResizeObserver(setSpeed).observe(tape);
+  document.fonts?.ready.then(setSpeed);
+  setSpeed();
+
   for (const q of store.quotes.values()) paint(q, false);
   store.subscribe((q) => paint(q, true));
   onThemeChange(() => { for (const q of store.quotes.values()) paint(q, false); });

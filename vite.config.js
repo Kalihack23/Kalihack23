@@ -5,7 +5,7 @@ const devApi = () => ({
   name: 'dev-api',
   configureServer(server) {
     server.middlewares.use(async (req, res, next) => {
-      const m = req.url.match(/^\/api\/(quotes|history|news)(\?|$)/);
+      const m = req.url.match(/^\/api\/(quotes|history|news|chat)(\?|$)/);
       if (!m) return next();
       try {
         const mod = await server.ssrLoadModule(`/api/${m[1]}.js`);
