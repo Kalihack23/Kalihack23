@@ -148,13 +148,15 @@ store.subscribe(() => {
 const watchlist = createWatchlist($('watchlist'), store, { onSelect: select });
 
 /* ---------- Chatbot « Orbit » ---------- */
-createChat({
+const chat = createChat({
   fab: $('chat-open'),
   el: $('chat'),
   store,
   onSelect: select,
   getFocus: () => panel.current,
 });
+// Onglet « Orbit » dans la barre du haut (ordinateur) : ouvre le chatbot.
+$('chat-tab').addEventListener('click', () => chat.open());
 
 /* ---------- Filtres ---------- */
 const active = new Set(DOMAINS.map((d) => d.id));
@@ -310,7 +312,7 @@ if (!reducedMotion) {
   gsap.from('.topbar', { y: -40, opacity: 0, duration: 1, ease: 'expo.out' });
   gsap.from('.tape', { opacity: 0, duration: 1, delay: 0.3 });
   gsap.from('#chips, .search, #view-seg', { y: 12, opacity: 0, duration: 0.7, stagger: 0.05, delay: 0.4, ease: 'power3.out' });
-  gsap.from('.watchlist, .chat-fab', { y: 30, opacity: 0, duration: 1, delay: 1.2, ease: 'expo.out' });
+  gsap.from('.watchlist', { y: 30, opacity: 0, duration: 1, delay: 1.2, ease: 'expo.out' });
 }
 
 /* ---------- Partage ---------- */

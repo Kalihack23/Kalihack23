@@ -510,9 +510,27 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
   color: var(--text);
   box-shadow: inset 0 1px 0 var(--glass-hi), 0 12px 34px var(--shadow);
   transition: transform 0.5s var(--spring), opacity 0.3s;
+  animation: fabIn 0.9s var(--spring) 1.2s both;
 }
+@keyframes fabIn { from { opacity: 0; transform: translateY(24px) scale(0.9); } }
 .chat-fab svg { width: 20px; height: 20px; fill: var(--blue); stroke: none; }
 .chat-fab[aria-expanded='true'] { opacity: 0; pointer-events: none; transform: scale(0.8); }
+/* Onglet « Orbit IA » dans la barre du haut (ordinateur et tablette) */
+.chat-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 14px 0 11px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+.chat-tab svg { width: 17px; height: 17px; fill: var(--blue); stroke: none; }
+.chat-tab[aria-expanded='true'] { box-shadow: inset 0 0 0 1.5px var(--blue), 0 6px 18px var(--shadow); }
 .chat {
   position: fixed;
   right: 18px;
@@ -906,6 +924,7 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
   .chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 2px 0 6px; }
   .chip { flex: none; }
   .search { margin: 0; min-width: 0; }
+  .chat-tab { display: none; }
   .chat-fab { right: 14px; bottom: 14px; width: 52px; height: 52px; padding: 0; justify-content: center; border-radius: 50%; }
   .chat-fab span { display: none; }
   .chat {

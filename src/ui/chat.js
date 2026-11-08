@@ -225,6 +225,7 @@ export function createChat({ fab, el, store, onSelect, getFocus }) {
     el.inert = false;
     el.classList.add('open');
     fab.setAttribute('aria-expanded', 'true');
+    document.getElementById('chat-tab')?.setAttribute('aria-expanded', 'true');
     if (!history.length && !log.children.length) {
       bubble('bot', renderMarkdown(`Bonjour, je suis **Orbit**. Posez-moi vos questions sur les ${COMPANIES.length} entreprises qui construisent l’IA : cours, rôle, comparaisons, actualité.`));
     }
@@ -236,6 +237,7 @@ export function createChat({ fab, el, store, onSelect, getFocus }) {
     el.classList.remove('open');
     el.inert = true;
     fab.setAttribute('aria-expanded', 'false');
+    document.getElementById('chat-tab')?.setAttribute('aria-expanded', 'false');
     lastFocus?.focus?.({ preventScroll: true });
   }
 
