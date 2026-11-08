@@ -16,9 +16,11 @@ Un site interactif qui regroupe les entreprises qui construisent l’intelligenc
 
 ## Fonctionnalités
 
-- **Vue Galaxie** : *circle packing* zoomable. La taille d'une bulle correspond à la capitalisation et sa couleur à la variation du jour.
-- **Vue Orbites** : un système solaire avec l’« IA » au centre. La bascule entre les deux vues anime les mêmes bulles.
-- **Motion design** : une onde à chaque nouveau cours, des couleurs et des compteurs animés, un classement des hausses et baisses qui se réordonne en glissant, un fond étoilé.
+- **Vue Galaxie** : bulles regroupées par domaine (taille = capitalisation, couleur = variation du jour). Elles **flottent, se bousculent, et peuvent être attrapées et lancées** à la souris ou au doigt. Un clic sur un domaine zoome dessus.
+- **Vue Bulles** : façon CoinGecko. Toutes les valeurs flottent librement, la **taille correspond à la variation du jour**, et les bulles rebondissent sur les bords.
+- **Vue Orbites** : un système solaire avec l’« IA » au centre. Les trois vues animent les mêmes bulles grâce à une simulation physique continue (d3-force).
+- **Design Apple** : un thème graphite et des couleurs système Apple. Les surfaces sont en **« Liquid Glass »** : verre dépoli, liseré lumineux, reflet qui suit le pointeur. Le contrôle segmenté a une lentille de verre qui coulisse avec un ressort, s’étire selon la vitesse et se tire au doigt. Les boutons ont un rebond élastique, et la fiche détaillée est une feuille de verre flottante (*bottom sheet* sur mobile).
+- **Motion design** : une onde à chaque nouveau cours, des couleurs et des compteurs animés, un classement des hausses et baisses qui se réordonne en glissant, un fond d’ambiance lumineux.
 - **Fiche entreprise** : prix en direct (dans sa devise), source du cours, **historique interactif** (séance, 5 jours, 1 mois, 6 mois, 1 an) avec réticule, et **actualités récentes**.
 - **Partager** : génère une **image 1080×1350** (format Instagram, TikTok ou X) du tableau de bord, avec l’indice IA et le top 3 des hausses et des baisses. Une **légende est prête à poster**. Sur mobile, le bouton ouvre le partage natif.
 - Filtres par domaine, recherche (Entrée ouvre la fiche), version mobile, `prefers-reduced-motion`.
@@ -67,7 +69,8 @@ src/
   viz/galaxy.js       visualisation D3 + GSAP (Galaxie ⇄ Orbites)
   viz/sparkline.js    mini-graphiques
   viz/historyChart.js graphique d’historique interactif
-  ui/                 bandeau, panneau, infobulle, classement, réglages, étoiles, partage
+  ui/glass.js         composants Liquid Glass (contrôle segmenté, reflets, ressorts)
+  ui/                 bandeau, panneau, infobulle, classement, réglages, ambiance, partage
   main.js             assemblage
 ```
 

@@ -5,23 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Orbit · Les valeurs de l’IA en temps réel</title>
     <meta name="description" content="Toutes les entreprises qui construisent l’IA — puces, infrastructure, cloud, logiciel — et leurs cours en temps réel, en cercles interactifs." />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='10' fill='%237c5cff'/%3E%3Ccircle cx='32' cy='32' r='24' fill='none' stroke='%232ec5ff' stroke-width='3'/%3E%3Ccircle cx='54' cy='22' r='5' fill='%2319e68c'/%3E%3C/svg%3E" />
+    <meta name="theme-color" content="#1c1c1e" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232c2c2e'/%3E%3Ccircle cx='32' cy='32' r='8' fill='%23f5f5f7'/%3E%3Ccircle cx='32' cy='32' r='19' fill='none' stroke='%238e8e93' stroke-width='2.5'/%3E%3Ccircle cx='49' cy='23' r='5' fill='%2330d158'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <canvas id="stars" aria-hidden="true"></canvas>
+    <canvas id="ambient" aria-hidden="true"></canvas>
 
-    <header class="topbar">
+    <!-- Filtre de réfraction "Liquid Glass" (appliqué via backdrop-filter sur Chromium) -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+      <filter id="liquid" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.008 0.012" numOctaves="2" seed="7" result="noise" />
+        <feGaussianBlur in="noise" stdDeviation="2" result="soft" />
+        <feDisplacementMap in="SourceGraphic" in2="soft" scale="38" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </svg>
+
+    <header class="topbar glass-bar">
       <div class="brand">
-        <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
-          <circle cx="20" cy="20" r="6" />
-          <circle class="brand-orbit" cx="20" cy="20" r="15" />
-          <circle class="brand-moon" cx="35" cy="20" r="3" />
-        </svg>
+        <span class="brand-mark glass" aria-hidden="true">
+          <svg viewBox="0 0 40 40">
+            <circle cx="20" cy="20" r="5.5" />
+            <circle class="brand-orbit" cx="20" cy="20" r="13" />
+            <circle class="brand-moon" cx="33" cy="20" r="3" />
+          </svg>
+        </span>
         <div>
-          <h1>AI<span>·</span>ORBIT</h1>
+          <h1>AI Orbit</h1>
           <p class="tagline">Les valeurs qui construisent l’IA</p>
         </div>
       </div>
@@ -33,19 +45,15 @@
       </div>
 
       <div class="actions">
-        <button class="status" id="status" type="button" title="Source des données">
+        <button class="status glass" id="status" type="button" title="Source des données">
           <i class="dot"></i><span id="status-text">Démarrage…</span>
         </button>
-        <div class="view-toggle" role="tablist" aria-label="Vue">
-          <button role="tab" class="active" data-view="pack" aria-selected="true">Galaxie</button>
-          <button role="tab" data-view="orbit" aria-selected="false">Orbites</button>
-          <span class="view-toggle-pill" aria-hidden="true"></span>
-        </div>
-        <button class="share-btn" id="open-share" type="button" aria-label="Partager une image">
+        <div class="seg glass" id="view-seg" aria-label="Vue"></div>
+        <button class="share-btn glass tinted" id="open-share" type="button" aria-label="Partager une image">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" /></svg>
           <span>Partager</span>
         </button>
-        <button class="icon-btn" id="open-settings" type="button" aria-label="Réglages">
+        <button class="icon-btn glass" id="open-settings" type="button" aria-label="Réglages">
           <svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm8.94-2.06-.06-2.88 2-1.62-2-3.46-2.44.88-2.5-1.44L15.5 2.5h-4l-.44 2.42-2.5 1.44-2.44-.88-2 3.46 2 1.62v2.88l-2 1.62 2 3.46 2.44-.88 2.5 1.44.44 2.42h4l.44-2.42 2.5-1.44 2.44.88 2-3.46-2-1.62Z" /></svg>
         </button>
       </div>
@@ -55,7 +63,7 @@
 
     <nav class="filters" aria-label="Filtres">
       <div class="chips" id="chips"></div>
-      <label class="search">
+      <label class="search glass">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.3-4.3M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" /></svg>
         <input id="search" type="search" placeholder="Rechercher : NVDA, Cloud…" autocomplete="off" />
       </label>
@@ -63,9 +71,9 @@
 
     <main class="stage" id="stage">
       <svg id="viz" role="img" aria-label="Carte interactive des entreprises de l’IA"></svg>
-      <p class="hint" id="hint">Cliquez sur un domaine pour zoomer · sur une bulle pour le détail</p>
+      <p class="hint glass" id="hint">Attrapez et lancez les bulles · cliquez sur un domaine pour zoomer</p>
 
-      <aside class="movers" id="movers" aria-label="Plus fortes variations">
+      <aside class="movers glass" id="movers" aria-label="Plus fortes variations">
         <h2>En mouvement</h2>
         <div class="movers-cols">
           <div><h3 class="up">▲ Hausses</h3><ol id="gainers"></ol></div>
@@ -73,19 +81,22 @@
         </div>
       </aside>
 
-      <div class="legend" aria-hidden="true">
+      <div class="legend glass" aria-hidden="true">
         <span>-3 %</span><i class="legend-bar"></i><span>+3 %</span>
       </div>
     </main>
 
-    <div class="tooltip" id="tooltip" role="tooltip"></div>
+    <div class="tooltip glass" id="tooltip" role="tooltip"></div>
 
-    <aside class="panel" id="panel" aria-hidden="true">
-      <button class="panel-close" id="panel-close" aria-label="Fermer">×</button>
+    <aside class="panel glass" id="panel" aria-hidden="true">
+      <span class="grabber" aria-hidden="true"></span>
+      <button class="panel-close glass" id="panel-close" aria-label="Fermer">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+      </button>
       <div id="panel-body"></div>
     </aside>
 
-    <dialog class="settings share" id="share">
+    <dialog class="settings share glass" id="share">
       <form method="dialog">
         <h2>Partager avec tes abonnés</h2>
         <div class="share-preview" id="share-preview"></div>
@@ -93,15 +104,15 @@
           <textarea id="share-caption" rows="6" readonly></textarea>
         </label>
         <div class="settings-actions">
-          <button value="close" class="ghost">Fermer</button>
-          <button type="button" class="ghost" id="share-copy">Copier la légende</button>
-          <button type="button" class="ghost" id="share-download">Télécharger l’image</button>
-          <button type="button" class="primary" id="share-native">Partager…</button>
+          <button value="close" class="ghost glass">Fermer</button>
+          <button type="button" class="ghost glass" id="share-copy">Copier la légende</button>
+          <button type="button" class="ghost glass" id="share-download">Télécharger l’image</button>
+          <button type="button" class="primary glass tinted" id="share-native">Partager…</button>
         </div>
       </form>
     </dialog>
 
-    <dialog class="settings" id="settings">
+    <dialog class="settings glass" id="settings">
       <form method="dialog">
         <h2>Source des données</h2>
         <p>
@@ -114,9 +125,9 @@
           <input id="api-key" type="password" placeholder="ex. c1ab2cd3…" autocomplete="off" spellcheck="false" />
         </label>
         <div class="settings-actions">
-          <button value="demo" class="ghost">Mode démo</button>
-          <button value="cancel" class="ghost">Annuler</button>
-          <button value="save" class="primary">Activer le live</button>
+          <button value="demo" class="ghost glass">Mode démo</button>
+          <button value="cancel" class="ghost glass">Annuler</button>
+          <button value="save" class="primary glass tinted">Activer le live</button>
         </div>
       </form>
     </dialog>

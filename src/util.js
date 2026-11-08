@@ -2,11 +2,11 @@ import * as d3 from 'd3';
 
 export const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Échelle divergente rouge → neutre → vert, saturée à ±3 %.
+// Échelle divergente (couleurs système Apple) rouge → gris → vert, saturée à ±3 %.
 export const colorScale = d3
   .scaleLinear()
   .domain([-3, -0.4, 0, 0.4, 3])
-  .range(['#ff3b5c', '#c2415e', '#6b7299', '#2fae7a', '#19e68c'])
+  .range(['#ff453a', '#c2524a', '#8e8e93', '#3fa864', '#30d158'])
   .interpolate(d3.interpolateRgb)
   .clamp(true);
 

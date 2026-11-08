@@ -3,8 +3,8 @@ import { colorFor, fmtCap, fmtPct } from '../util.js';
 
 const W = 1080;
 const H = 1350;
-const MONO = '"JetBrains Mono", ui-monospace, monospace';
-const SANS = '"Space Grotesk", system-ui, sans-serif';
+const SANS = '-apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, system-ui, sans-serif';
+const MONO = SANS; // chiffres : la police système (tabulaire) suffit
 
 function alpha(color, a) {
   // Accepte #rrggbb ou rgb(r, g, b).
@@ -17,23 +17,18 @@ function alpha(color, a) {
 }
 
 function drawBackground(ctx) {
-  ctx.fillStyle = '#05060d';
+  ctx.fillStyle = '#1c1c1e';
   ctx.fillRect(0, 0, W, H);
-  const g1 = ctx.createRadialGradient(780, 260, 0, 780, 260, 800);
-  g1.addColorStop(0, 'rgba(124,92,255,0.22)');
-  g1.addColorStop(1, 'rgba(124,92,255,0)');
-  ctx.fillStyle = g1;
-  ctx.fillRect(0, 0, W, H);
-  const g2 = ctx.createRadialGradient(120, 1200, 0, 120, 1200, 700);
-  g2.addColorStop(0, 'rgba(46,197,255,0.14)');
-  g2.addColorStop(1, 'rgba(46,197,255,0)');
-  ctx.fillStyle = g2;
-  ctx.fillRect(0, 0, W, H);
-  for (let i = 0; i < 220; i++) {
-    const z = Math.random();
-    ctx.fillStyle = `rgba(200,210,255,${0.15 + z * 0.5})`;
-    ctx.fillRect(Math.random() * W, Math.random() * H, z * 2.2, z * 2.2);
-  }
+  const blob = (x, y, r, rgb, a) => {
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(${rgb},${a})`);
+    g.addColorStop(1, `rgba(${rgb},0)`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  };
+  blob(820, 220, 760, '10,132,255', 0.16);
+  blob(160, 1180, 700, '191,90,242', 0.1);
+  blob(540, 700, 600, '255,255,255', 0.035);
 }
 
 function drawViz(ctx, snap, box) {
@@ -54,7 +49,7 @@ function drawViz(ctx, snap, box) {
     g.addColorStop(1, 'rgba(124,92,255,0)');
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(cx, cy, r * 2.2, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#120f2b';
+    ctx.fillStyle = '#2c2c2e';
     ctx.strokeStyle = colorFor(snap.core.index);
     ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
@@ -82,7 +77,7 @@ function drawViz(ctx, snap, box) {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'bottom';
       ctx.lineWidth = 6;
-      ctx.strokeStyle = '#05060d';
+      ctx.strokeStyle = '#1c1c1e';
       const label = d.name.toUpperCase();
       ctx.strokeText(label, cx, cy - r - 10);
       ctx.fillStyle = d.color;
@@ -98,10 +93,18 @@ function drawViz(ctx, snap, box) {
     ctx.setLineDash(n.listed ? [] : [5, 5]);
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     ctx.setLineDash([]);
+    if (r > 4) {
+      const sh = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.45, 0, cx, cy, r);
+      sh.addColorStop(0, 'rgba(255,255,255,0.3)');
+      sh.addColorStop(0.45, 'rgba(255,255,255,0.05)');
+      sh.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = sh;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    }
     if (r > 16) {
       const fs = Math.min(34, r * 0.36);
       const label = n.ticker.length > 6 ? n.name.split(' ')[0] : n.ticker;
-      ctx.fillStyle = '#e8ebff';
+      ctx.fillStyle = '#f5f5f7';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.font = `600 ${fs}px ${MONO}`;
@@ -126,35 +129,30 @@ export async function renderShareImage({ snapshot, stats, movers, sourceLabel })
   // En-tête
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = '#e8ebff';
+  ctx.fillStyle = '#f5f5f7';
   ctx.font = `700 54px ${SANS}`;
-  ctx.fillText('AI', 60, 110);
-  const wAI = ctx.measureText('AI').width;
-  ctx.fillStyle = '#2ec5ff';
-  ctx.fillText('·', 60 + wAI, 110);
-  ctx.fillStyle = '#e8ebff';
-  ctx.fillText('ORBIT', 60 + wAI + ctx.measureText('·').width, 110);
-  ctx.fillStyle = '#8a91b4';
+  ctx.fillText('AI Orbit', 60, 110);
+  ctx.fillStyle = '#98989f';
   ctx.font = `400 24px ${SANS}`;
   ctx.fillText('Les valeurs qui construisent l’IA', 60, 148);
   const date = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(new Date());
   ctx.textAlign = 'right';
   ctx.font = `400 22px ${MONO}`;
   ctx.fillText(date, W - 60, 110);
-  ctx.fillStyle = sourceLabel.startsWith('DÉMO') ? '#ffb020' : '#19e68c';
+  ctx.fillStyle = sourceLabel.startsWith('DÉMO') ? '#ff9f0a' : '#30d158';
   ctx.fillText(sourceLabel, W - 60, 148);
 
   // Statistiques
   const statY = 220;
   const cols = [
-    ['INDICE IA', fmtPct(stats.index), colorFor(stats.index * 2)],
-    ['CAPITALISATION', fmtCap(stats.cap), '#e8ebff'],
-    ['HAUSSE / BAISSE', `${stats.up} / ${stats.down}`, '#e8ebff'],
+    ['Indice IA', fmtPct(stats.index), colorFor(stats.index * 2)],
+    ['Capitalisation', fmtCap(stats.cap), '#f5f5f7'],
+    ['Hausse / Baisse', `${stats.up} / ${stats.down}`, '#f5f5f7'],
   ];
   cols.forEach(([label, value, color], i) => {
     const x = 60 + i * 330;
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#8a91b4';
+    ctx.fillStyle = '#98989f';
     ctx.font = `500 18px ${SANS}`;
     ctx.fillText(label, x, statY);
     ctx.fillStyle = color;
@@ -166,11 +164,11 @@ export async function renderShareImage({ snapshot, stats, movers, sourceLabel })
 
   // Classement
   const boxY = 1060;
-  ctx.fillStyle = 'rgba(18,22,44,0.7)';
-  ctx.strokeStyle = 'rgba(140,150,255,0.18)';
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.14)';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.roundRect(60, boxY, W - 120, 200, 24);
+  ctx.roundRect(60, boxY, W - 120, 200, 32);
   ctx.fill();
   ctx.stroke();
   const list = (title, rows, x, color) => {
@@ -180,7 +178,7 @@ export async function renderShareImage({ snapshot, stats, movers, sourceLabel })
     ctx.fillText(title, x, boxY + 46);
     rows.slice(0, 3).forEach((r, i) => {
       const y = boxY + 92 + i * 40;
-      ctx.fillStyle = '#e8ebff';
+      ctx.fillStyle = '#f5f5f7';
       ctx.font = `600 26px ${MONO}`;
       ctx.textAlign = 'left';
       ctx.fillText(r.ticker, x, y);
@@ -189,11 +187,11 @@ export async function renderShareImage({ snapshot, stats, movers, sourceLabel })
       ctx.fillText(fmtPct(r.pct), x + 380, y);
     });
   };
-  list('▲ TOP HAUSSES', movers.gainers, 100, '#19e68c');
-  list('▼ TOP BAISSES', movers.losers, 580, '#ff3b5c');
+  list('▲ Top hausses', movers.gainers, 100, '#30d158');
+  list('▼ Top baisses', movers.losers, 580, '#ff453a');
 
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#5d6488';
+  ctx.fillStyle = '#636366';
   ctx.font = `400 18px ${SANS}`;
   ctx.fillText('Données à titre informatif — pas un conseil en investissement', W / 2, H - 40);
 

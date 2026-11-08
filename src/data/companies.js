@@ -7,13 +7,13 @@
 // Les valeurs de référence sont indicatives : en mode LIVE, les prix sont remplacés par les vrais cours.
 
 export const DOMAINS = [
-  { id: 'chips', name: 'Puces & Semi-conducteurs', short: 'Puces', color: '#7c5cff' },
-  { id: 'infra', name: 'Infrastructure & Énergie', short: 'Infra', color: '#ff8a3d' },
-  { id: 'cloud', name: 'Cloud & Hyperscalers', short: 'Cloud', color: '#2ec5ff' },
-  { id: 'software', name: 'Logiciel & Modèles', short: 'Logiciel', color: '#ff4fa3' },
-  { id: 'data', name: 'Données & Cybersécurité', short: 'Data/Cyber', color: '#3dffb5' },
-  { id: 'robotics', name: 'Robotique & Edge', short: 'Robotique', color: '#ffd23d' },
-  { id: 'private', name: 'Laboratoires privés', short: 'Privés', color: '#b0b8d0' },
+  { id: 'chips', name: 'Puces & Semi-conducteurs', short: 'Puces', color: '#bf5af2' },
+  { id: 'infra', name: 'Infrastructure & Énergie', short: 'Infra', color: '#ff9f0a' },
+  { id: 'cloud', name: 'Cloud & Hyperscalers', short: 'Cloud', color: '#0a84ff' },
+  { id: 'software', name: 'Logiciel & Modèles', short: 'Logiciel', color: '#ff375f' },
+  { id: 'data', name: 'Données & Cybersécurité', short: 'Data/Cyber', color: '#63e6e2' },
+  { id: 'robotics', name: 'Robotique & Edge', short: 'Robotique', color: '#ffd60a' },
+  { id: 'private', name: 'Laboratoires privés', short: 'Privés', color: '#8e8e93' },
 ];
 
 const c = (ticker, name, domain, price, cap, vol, country, role) => ({

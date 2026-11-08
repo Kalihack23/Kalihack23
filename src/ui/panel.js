@@ -4,6 +4,7 @@ import { domainById } from '../data/companies.js';
 import { sparklineSVG } from '../viz/sparkline.js';
 import { renderHistoryChart } from '../viz/historyChart.js';
 import { fetchHistory, fetchNews } from '../data/history.js';
+import { createSegmented } from './glass.js';
 import { arrow, colorFor, fmtCap, fmtPct, fmtPrice, reducedMotion } from '../util.js';
 
 const COUNTRY = { US: 'États-Unis', TW: 'Taïwan', NL: 'Pays-Bas', GB: 'Royaume-Uni', IE: 'Irlande', DE: 'Allemagne', CH: 'Suisse', FR: 'France', KR: 'Corée du Sud', JP: 'Japon', CN: 'Chine', IN: 'Inde' };
@@ -100,7 +101,7 @@ export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
       <div class="p-price" id="p-price">${listed ? fmtPrice(q.price, q.currency) : fmtCap(co.cap)}</div>
       <div class="p-change" id="p-change" style="color:${c}">${listed ? `${arrow(q.changePct)} ${fmtPct(q.changePct)} aujourd’hui` : 'Valorisation privée estimée'}</div>
       ${listed ? `<div id="p-src">${srcBadge(q)}</div>
-      <div class="p-tabs" role="tablist">${RANGES.map(([id, label]) => `<button role="tab" data-range="${id}" class="${id === range ? 'active' : ''}">${label}</button>`).join('')}</div>
+      <div class="p-tabs glass" id="p-tabs"></div>
       <div class="p-chart" id="p-chart"></div>
       <div class="p-perf" id="p-perf"></div>` : ''}
       <p class="p-role">${esc(co.role)}</p>
@@ -117,11 +118,18 @@ export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
       <p class="p-note">Capitalisations et valorisations approximatives, données à titre informatif — pas un conseil en investissement.</p>`;
     shown.price = q.price;
 
-    body.querySelectorAll('.p-tabs button').forEach((b) => b.addEventListener('click', () => {
-      range = b.dataset.range;
-      body.querySelectorAll('.p-tabs button').forEach((x) => x.classList.toggle('active', x === b));
-      drawChart(true);
-    }));
+    const tabs = body.querySelector('#p-tabs');
+    if (tabs) {
+      createSegmented(tabs, {
+        label: 'Période',
+        value: range,
+        items: RANGES.map(([id, label]) => ({ id, label })),
+        onChange: (id) => {
+          range = id;
+          drawChart(true);
+        },
+      });
+    }
     if (listed) drawChart(true);
     loadNews(co);
   }

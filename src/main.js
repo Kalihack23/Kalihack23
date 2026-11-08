@@ -7,7 +7,8 @@ import { createTicker } from './ui/ticker.js';
 import { createMovers } from './ui/movers.js';
 import { createPanel, createTooltip } from './ui/panel.js';
 import { createSettings, getApiKey } from './ui/settings.js';
-import { createStars } from './ui/stars.js';
+import { createAmbient } from './ui/ambient.js';
+import { createSegmented, initGlass } from './ui/glass.js';
 import { buildCaption, renderShareImage } from './ui/share.js';
 import { colorFor, fmtCap, fmtPct, reducedMotion } from './util.js';
 
@@ -96,7 +97,12 @@ setInterval(() => {
 startFeed();
 
 /* ---------- Vues ---------- */
-createStars($('stars'));
+createAmbient($('ambient'));
+initGlass();
+// Réfraction "Liquid Glass" : backdrop-filter avec filtre SVG, rendu correctement par Chromium uniquement.
+if (/Chrome\//.test(navigator.userAgent) && !/Edg\/|OPR\//.test(navigator.userAgent) && CSS.supports('backdrop-filter', 'blur(1px)')) {
+  document.documentElement.classList.add('liquid-ok');
+}
 
 const tooltip = createTooltip($('tooltip'), store);
 let galaxy;
@@ -162,29 +168,33 @@ search.addEventListener('keydown', (e) => {
   if (hit) select(hit);
 });
 
-/* ---------- Bascule Galaxie / Orbites ---------- */
-const toggle = document.querySelector('.view-toggle');
-const pill = toggle.querySelector('.view-toggle-pill');
-function placePill(btn) {
-  pill.style.width = `${btn.offsetWidth}px`;
-  pill.style.transform = `translateX(${btn.offsetLeft - 3}px)`;
-}
-toggle.querySelectorAll('button').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    toggle.querySelectorAll('button').forEach((b) => {
-      b.classList.toggle('active', b === btn);
-      b.setAttribute('aria-selected', String(b === btn));
+/* ---------- Vues : Galaxie · Bulles · Orbites ---------- */
+const HINTS = {
+  pack: 'Attrapez et lancez les bulles · cliquez sur un domaine pour zoomer',
+  bubbles: 'Taille = variation du jour · attrapez, lancez, faites-les rebondir',
+  orbit: 'Chaque orbite est un domaine · survolez une planète',
+};
+createSegmented($('view-seg'), {
+  label: 'Vue',
+  value: 'pack',
+  items: [
+    { id: 'pack', label: 'Galaxie' },
+    { id: 'bubbles', label: 'Bulles' },
+    { id: 'orbit', label: 'Orbites' },
+  ],
+  onChange: (mode) => {
+    galaxy.setMode(mode);
+    const hint = $('hint');
+    gsap.to(hint, {
+      opacity: 0,
+      duration: reducedMotion ? 0 : 0.2,
+      onComplete: () => {
+        hint.textContent = HINTS[mode];
+        gsap.to(hint, { opacity: 1, duration: reducedMotion ? 0 : 0.4, ease: 'power3.out' });
+      },
     });
-    placePill(btn);
-    galaxy.setMode(btn.dataset.view);
-    $('hint').textContent = btn.dataset.view === 'orbit'
-      ? 'Chaque orbite est un domaine · survolez une planète'
-      : 'Cliquez sur un domaine pour zoomer · sur une bulle pour le détail';
-  });
+  },
 });
-document.fonts?.ready.then(() => placePill(toggle.querySelector('button.active')));
-placePill(toggle.querySelector('button.active'));
-window.addEventListener('resize', () => placePill(toggle.querySelector('button.active')));
 
 /* ---------- Statistiques globales ---------- */
 const statShown = { index: 0, cap: 0 };
@@ -230,7 +240,7 @@ $('status').addEventListener('click', settings.open);
 if (!reducedMotion) {
   gsap.from('.topbar', { y: -40, opacity: 0, duration: 1, ease: 'expo.out' });
   gsap.from('.tape', { opacity: 0, duration: 1, delay: 0.3 });
-  gsap.from('#chips, .search', { y: 12, opacity: 0, duration: 0.7, stagger: 0.05, delay: 0.4, ease: 'power3.out' });
+  gsap.from('#chips, .search, #view-seg', { y: 12, opacity: 0, duration: 0.7, stagger: 0.05, delay: 0.4, ease: 'power3.out' });
   gsap.from('.movers, .legend', { y: 30, opacity: 0, duration: 1, delay: 1.2, ease: 'expo.out' });
 }
 
