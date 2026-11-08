@@ -40,7 +40,7 @@ describe('/api/chat', () => {
   });
   it('relaie le flux, envoie le contexte et les sources', async () => {
     vi.stubEnv('PERPLEXITY_API_KEY', 'k');
-    const fetchMock = vi.fn(async () => ({ ok: true, status: 200, body: sse([
+    const fetchMock = vi.fn(async (url) => (!String(url).includes('perplexity') ? { ok: false, status: 404, text: async () => '' } : { ok: true, status: 200, body: sse([
       { choices: [{ delta: { content: 'NVIDIA (NVDA) ' } }] },
       { choices: [{ delta: { content: 'monte.' } }], search_results: [{ title: 'Reuters', url: 'https://reuters.com/a' }, { title: 'Piège', url: 'javascript:x' }] },
     ]) }));
@@ -51,10 +51,11 @@ describe('/api/chat', () => {
     expect(events.filter((e) => e.type === 'delta').map((e) => e.text).join('')).toBe('NVIDIA (NVDA) monte.');
     expect(events.find((e) => e.type === 'sources').items).toEqual([{ title: 'Reuters', url: 'https://reuters.com/a' }]);
     expect(events.at(-1).type).toBe('done');
-    const sent = JSON.parse(fetchMock.mock.calls[0][1].body);
+    const pplx = fetchMock.mock.calls.find(([u]) => String(u).includes('api.perplexity.ai'));
+    const sent = JSON.parse(pplx[1].body);
     expect(sent.messages[0].role).toBe('system');
     expect(sent.messages[0].content).toContain('NVDA NVIDIA : 185 $');
-    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer k');
+    expect(pplx[1].headers.Authorization).toBe('Bearer k');
   });
   it('limite le nombre de questions par minute', async () => {
     vi.stubEnv('PERPLEXITY_API_KEY', 'k');

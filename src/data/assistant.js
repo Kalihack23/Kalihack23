@@ -76,20 +76,61 @@ function movers(store, domain, dir, n = 5) {
   return rows.slice(0, n);
 }
 
+/* ---------- Données ouvertes (Wikipedia/Wikidata, GDELT, SEC) ---------- */
+const nf = new Intl.NumberFormat('fr-FR');
+const bn = (v) => `${(v / 1e9).toFixed(v >= 1e11 ? 0 : 1).replace('.', ',')} Md$`;
+const dateFr = (d) => (d ? new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(d)) : '');
+
+function factsLine(k) {
+  const f = k?.wiki?.facts;
+  if (!f) return '';
+  const parts = [
+    f.ceo && `PDG : **${f.ceo}**`,
+    f.hq && `siège : ${f.hq}`,
+    f.founded && `fondée en ${f.founded}`,
+    f.employees && `${nf.format(f.employees.value)} employés${f.employees.year ? ` (${f.employees.year})` : ''}`,
+  ].filter(Boolean);
+  return parts.length ? `- ${parts.join(' · ')}` : '';
+}
+
+function secBlock(k) {
+  const s = k?.sec;
+  if (!s || (!s.revenue && !s.quarter)) return '';
+  const lines = [];
+  if (s.revenue) lines.push(`- Chiffre d’affaires (exercice clos le ${dateFr(s.revenue.end)}) : **${bn(s.revenue.value)}**${s.netIncome ? ` · résultat net : **${bn(s.netIncome.value)}**` : ''}`);
+  if (s.quarter) lines.push(`- Dernier trimestre (clos le ${dateFr(s.quarter.end)}) : **${bn(s.quarter.value)}**${s.quarter.yoy != null ? ` (${s.quarter.yoy >= 0 ? '+' : '−'}${Math.abs(s.quarter.yoy).toFixed(0)} % sur un an)` : ''}`);
+  const last = s.filings?.[0];
+  if (last) lines.push(`- Dernier rapport : [${last.form} du ${dateFr(last.date)}](${last.url})`);
+  return lines.join('\n');
+}
+
+function newsBlock(k, n = 3) {
+  const items = k?.news?.slice(0, n) || [];
+  if (!items.length) return '';
+  return items.map((a) => `- [${a.title.replace(/[[\]]/g, '')}](${a.url}) — ${a.source}${a.date ? `, ${dateFr(a.date)}` : ''}`).join('\n');
+}
+
+function sourcesLine(ks) {
+  const list = ks.flatMap((k) => k?.sources || []);
+  if (!list.length) return '';
+  const uniq = [...new Map(list.map((x) => [x.url, x])).values()].slice(0, 6);
+  return `\n\n_Sources ouvertes :_ ${uniq.map((x) => `[${x.name}](${x.url})`).join(' · ')}`;
+}
+
 const SUGGEST = '\n\nEssayez par exemple : « Combien vaut NVIDIA ? », « Top hausses dans l’énergie », « Compare AMD et NVIDIA », « Que fait Vertiv ? ».';
 
 /**
  * Réponse de l'assistant local (Markdown léger).
  * @param {string} question
  * @param {{ get: Function, mode: string }} store
- * @param {{ focus?: object, noKey?: boolean }} [opts]
+ * @param {{ focus?: object, noKey?: boolean, knowledge?: Record<string, object> }} [opts] knowledge : données ouvertes par symbole
  */
-export function localAnswer(question, store, { focus = null, noKey = false } = {}) {
+export function localAnswer(question, store, { focus = null, noKey = false, knowledge = null } = {}) {
   const n = norm(question);
   let cos = findCompanies(question);
   if (!cos.length && focus && has(n, ['elle', 'cette', 'ce titre', 'cette action', 'pourquoi', 'que fait', 'combien', 'prix', 'cours'])) cos = [focus];
   const domain = findDomain(question);
-  const footer = noKey ? '\n\n_Mode local : pour des réponses complètes (actualité, analyses), le site doit être relié à Perplexity._' : '';
+  const footer = noKey && !knowledge ? '\n\n_Mode local : pour des réponses plus complètes, le site doit être en ligne (sources ouvertes) ou relié à Perplexity._' : '';
 
   const wantsUp = has(n, ['hausse', 'monte', 'gagn', 'meilleur', 'top', 'progress', 'grimpe']);
   const wantsDown = has(n, ['baisse', 'chute', 'perd', 'pire', 'recul', 'flop', 'degringol']);
@@ -112,16 +153,52 @@ export function localAnswer(question, store, { focus = null, noKey = false } = {
       const better = qa.changePct >= qb.changePct ? a : b;
       verdict = `\n\nAujourd’hui, **${better.name}** fait mieux. En capitalisation, ${capOf(a, qa) >= capOf(b, qb) ? a.name : b.name} est la plus grande.`;
     }
-    return `Comparaison :\n- ${line(a, qa, store)}\n  _${a.role}_\n- ${line(b, qb, store)}\n  _${b.role}_${verdict}${footer}`;
+    const extra = (c) => {
+      const k = knowledge?.[c.ticker];
+      const bits = [k?.sec?.revenue && `CA ${bn(k.sec.revenue.value)}`, k?.wiki?.facts?.employees && `${nf.format(k.wiki.facts.employees.value)} employés`].filter(Boolean);
+      return bits.length ? ` · ${bits.join(' · ')}` : '';
+    };
+    return `Comparaison :\n- ${line(a, qa, store)}${extra(a)}\n  _${a.role}_\n- ${line(b, qb, store)}${extra(b)}\n  _${b.role}_${verdict}${sourcesLine([knowledge?.[a.ticker], knowledge?.[b.ticker]])}${footer}`;
   }
 
-  // Une entreprise : cours + rôle
+  // Une entreprise : selon la question, présentation, actualités, résultats ou fiche d'identité.
   if (cos.length === 1) {
     const c = cos[0];
     const q = store.get(c.ticker);
+    const k = knowledge?.[c.ticker];
     const dom = DOMAINS.find((d) => d.id === c.domain);
-    const why = has(n, ['pourquoi', 'raison', 'actualite', 'news']) ? '\n\nJe ne peux pas lire l’actualité en mode local : ouvrez la fiche pour les dernières nouvelles.' : '';
-    return `${line(c, q, store)}\n\n**Rôle dans l’IA** (${dom.name}) : ${c.role}${why}${footer}`;
+    const f = k?.wiki?.facts || {};
+    const out = [line(c, q, store)];
+    const wantsNews = has(n, ['pourquoi', 'raison', 'actualite', 'actu', 'news', 'nouvelle', 'bouge', 'se passe']);
+    const wantsFin = has(n, ['chiffre d affaires', 'ca ', 'revenu', 'benefice', 'resultat', 'croissance', 'finance', 'comptes', 'trimestre', 'marge']);
+    const wantsFacts = has(n, ['pdg', 'ceo', 'patron', 'dirige', 'siege', 'fondee', 'fonde', 'creation', 'cree', 'employe', 'salarie', 'effectif']);
+
+    if (wantsFacts) {
+      const bits = [];
+      if (has(n, ['pdg', 'ceo', 'patron', 'dirige'])) bits.push(f.ceo ? `**${c.name}** est dirigée par **${f.ceo}**.` : `Je n’ai pas trouvé le nom du dirigeant de ${c.name} dans Wikidata.`);
+      if (has(n, ['siege'])) bits.push(f.hq ? `Siège : **${f.hq}**.` : 'Siège non renseigné dans Wikidata.');
+      if (has(n, ['fondee', 'fonde', 'creation', 'cree'])) bits.push(f.founded ? `Fondée en **${f.founded}**.` : 'Date de création non renseignée.');
+      if (has(n, ['employe', 'salarie', 'effectif'])) bits.push(f.employees ? `Environ **${nf.format(f.employees.value)}** employés${f.employees.year ? ` (${f.employees.year})` : ''}.` : 'Effectif non renseigné.');
+      out.unshift(bits.join(' '));
+    } else if (wantsFin) {
+      const block = secBlock(k);
+      if (block) out.push(`**Résultats officiels (SEC EDGAR)** :\n${block}`);
+      else if (f.revenue) out.push(`**Chiffre d’affaires** (Wikidata${f.revenue.year ? `, ${f.revenue.year}` : ''}) : ${nf.format(Math.round(f.revenue.value / 1e6))} millions ${f.revenue.currency || ''}${c.us ? '' : '\n_(Société non américaine : pas de comptes SEC.)_'}`);
+      else out.push(k ? 'Je n’ai pas trouvé de résultats financiers publiés pour cette entreprise.' : 'Les résultats financiers s’affichent une fois le site en ligne (sources ouvertes indisponibles ici).');
+    } else if (wantsNews) {
+      const block = newsBlock(k, 4);
+      out.push(block ? `**Dernières actualités** (GDELT) :\n${block}` : (k ? 'Je n’ai pas trouvé d’article récent sur cette entreprise.' : 'Les actualités s’affichent une fois le site en ligne (sources ouvertes indisponibles ici).'));
+    } else {
+      if (k?.wiki?.summary) out.push(k.wiki.summary);
+      const fl = factsLine(k);
+      if (fl) out.push(fl);
+    }
+    out.push(`**Rôle dans l’IA** (${dom.name}) : ${c.role}`);
+    if (!wantsNews && !wantsFin && !wantsFacts) {
+      const nb = newsBlock(k, 2);
+      if (nb) out.push(`**À la une** :\n${nb}`);
+    }
+    return `${out.join('\n\n')}${sourcesLine([k])}${footer}`;
   }
 
   // Liste d'un domaine

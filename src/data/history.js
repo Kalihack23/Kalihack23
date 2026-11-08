@@ -56,3 +56,16 @@ export async function fetchNews(co) {
   newsCache.set(q, { at: Date.now(), items });
   return items;
 }
+
+// Données ouvertes (Wikipedia/Wikidata, GDELT, SEC EDGAR) d'une entreprise, via /api/knowledge.
+const knowledgeCache = new Map();
+export function fetchKnowledge(co) {
+  const hit = knowledgeCache.get(co.ticker);
+  if (hit && Date.now() - hit.at < 15 * 60 * 1000) return hit.promise;
+  const promise = fetch(`/api/knowledge?ticker=${encodeURIComponent(co.ticker)}`, { signal: AbortSignal.timeout(12000) })
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null);
+  knowledgeCache.set(co.ticker, { at: Date.now(), promise });
+  promise.then((k) => { if (!k) knowledgeCache.delete(co.ticker); });
+  return promise;
+}

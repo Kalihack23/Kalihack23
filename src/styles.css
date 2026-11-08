@@ -581,6 +581,7 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 .msg-sources span { width: 100%; color: var(--text-2); font-weight: 600; }
 .msg-sources a { color: var(--link); text-decoration: none; }
 .typing { display: inline-flex; gap: 4px; padding: 4px 2px; }
+.msg-status { margin-left: 8px; font-size: 12.5px; color: var(--text-2); }
 .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-2); animation: typing 1.2s infinite ease-in-out; }
 .typing i:nth-child(2) { animation-delay: 0.15s; }
 .typing i:nth-child(3) { animation-delay: 0.3s; }
@@ -697,6 +698,11 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 .p-section { margin-top: 24px; }
 .p-section h3 { margin: 0 0 8px; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
 .p-role { margin: 0; line-height: 1.5; font-size: 15px; color: var(--text-body); }
+.p-wiki { margin: 10px 0 0; font-size: 14px; line-height: 1.5; color: var(--text-2); }
+.p-wiki a, .p-filing a { color: var(--link); font-weight: 600; text-decoration: none; }
+.p-facts { margin-top: 10px; }
+.p-facts small { color: var(--text-2); font-weight: 500; }
+.p-filing { margin: 8px 0 0; font-size: 12.5px; color: var(--text-2); }
 .p-note { margin-top: 18px; font-size: 11.5px; color: var(--text-3); line-height: 1.5; }
 .p-empty { color: var(--text-2); font-size: 13px; list-style: none; }
 .p-news ul { list-style: none; margin: 0; padding: 0; }
@@ -752,6 +758,7 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
   cursor: pointer;
 }
 .wl-main:focus-visible { outline-offset: -2px; }
+.wl-row[hidden] { display: none; }
 .wl-row::after { content: ''; position: absolute; left: 10px; right: 10px; bottom: 0; height: 0.5px; background: var(--sep); }
 .wl-row:hover { background: var(--hover); }
 .wl-row.selected { background: var(--selected); }

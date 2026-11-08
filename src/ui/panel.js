@@ -4,7 +4,7 @@ import { domainById } from '../data/companies.js';
 import { miniChartSVG, renderHistoryChart, scrubLabel } from '../viz/historyChart.js';
 import { capIsEstimate, capOf, isStale } from '../data/derived.js';
 import { STATUS_LABEL, exchangeOf, marketStatus } from '../data/markets.js';
-import { fetchHistory, fetchNews } from '../data/history.js';
+import { fetchHistory, fetchKnowledge, fetchNews } from '../data/history.js';
 import { createSegmented } from './glass.js';
 import { onThemeChange } from './theme.js';
 import { arrow, colorFor, fmtCap, fmtPct, fmtPrice, reducedMotion } from '../util.js';
@@ -155,6 +155,7 @@ export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
       <section class="p-section">
         <h3>À propos</h3>
         <p class="p-role">${esc(co.role)}</p>
+        <div id="p-about" class="p-about"></div>
       </section>
       <section class="p-section p-news">
         <h3>Actualités</h3>
@@ -180,6 +181,7 @@ export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
       drawChart(true);
     }
     loadNews(co);
+    loadAbout(co);
   }
 
   // En-tête : prix, variation (valeur et %) et libellé de période / date survolée.
@@ -255,6 +257,30 @@ export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
     describeChart(chart, co, r.first, r.last, data.currency || q.currency, label.toLowerCase());
     simEl.textContent = data.simulated ? 'Historique simulé (démo)' : '';
     restoreHeader(true);
+  }
+
+  // Données ouvertes : résumé Wikipedia, fiche Wikidata et résultats SEC (invisibles si indisponibles).
+  async function loadAbout(co) {
+    const k = await fetchKnowledge(co);
+    const box = body.querySelector('#p-about');
+    if (!k || current !== co || !box) return;
+    const f = k.wiki?.facts || {};
+    const nfmt = new Intl.NumberFormat('fr-FR');
+    const bn = (v) => `${(v / 1e9).toFixed(v >= 1e11 ? 0 : 1).replace('.', ',')}\u00a0Md$`;
+    const rows = [
+      f.ceo && stat('PDG', esc(f.ceo)),
+      f.hq && stat('Siège', esc(f.hq)),
+      f.founded && stat('Création', esc(f.founded)),
+      f.employees && stat('Employés', `${nfmt.format(f.employees.value)}${f.employees.year ? ` <small>(${esc(f.employees.year)})</small>` : ''}`),
+      k.sec?.revenue && stat('CA annuel (SEC)', bn(k.sec.revenue.value)),
+      k.sec?.netIncome && stat('Résultat net (SEC)', bn(k.sec.netIncome.value)),
+      k.sec?.quarter && stat('Dernier trimestre', `${bn(k.sec.quarter.value)}${k.sec.quarter.yoy != null ? ` <small>(${k.sec.quarter.yoy >= 0 ? '+' : '−'}${Math.abs(k.sec.quarter.yoy).toFixed(0)}\u00a0%)</small>` : ''}`),
+    ].filter(Boolean);
+    const summary = k.wiki?.summary ? `<p class="p-wiki">${esc(k.wiki.summary)} ${k.wiki.url ? `<a href="${esc(k.wiki.url)}" target="_blank" rel="noopener noreferrer">Wikipedia</a>` : ''}</p>` : '';
+    const filing = k.sec?.filings?.[0] ? `<p class="p-filing">Dernier rapport officiel : <a href="${esc(k.sec.filings[0].url)}" target="_blank" rel="noopener noreferrer">${esc(k.sec.filings[0].form)} du ${esc(k.sec.filings[0].date)}</a></p>` : '';
+    if (!summary && !rows.length) return;
+    box.innerHTML = `${summary}${rows.length ? `<div class="p-stats single p-facts"><div>${rows.join('')}</div></div>` : ''}${filing}`;
+    if (!reducedMotion) gsap.from(box, { opacity: 0, y: 8, duration: 0.5, ease: 'power3.out' });
   }
 
   async function loadNews(co) {

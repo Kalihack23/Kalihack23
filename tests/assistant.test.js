@@ -51,6 +51,35 @@ describe('assistant local', () => {
   });
 });
 
+describe('assistant + données ouvertes', () => {
+  const knowledge = {
+    NVDA: {
+      company: { ticker: 'NVDA', name: 'NVIDIA' },
+      wiki: { summary: 'Nvidia est une entreprise américaine.', url: 'https://fr.wikipedia.org/wiki/Nvidia', facts: { ceo: 'Jensen Huang', hq: 'Santa Clara', founded: '1993', employees: { value: 36000, year: '2025' } } },
+      news: [{ title: 'Nvidia bat les attentes', url: 'https://www.lesechos.fr/a', source: 'lesechos.fr', date: '2026-11-07' }],
+      sec: { revenue: { end: '2026-01-25', value: 130e9 }, netIncome: { end: '2026-01-25', value: 72e9 }, quarter: { end: '2026-10-25', value: 57e9, yoy: 62.9 }, filings: [{ form: '10-Q', date: '2026-10-25', url: 'https://www.sec.gov/x' }] },
+      sources: [{ name: 'Wikipedia / Wikidata', url: 'https://fr.wikipedia.org/wiki/Nvidia' }, { name: 'SEC EDGAR', url: 'https://www.sec.gov/c' }],
+    },
+  };
+  it('présentation : résumé Wikipedia, fiche, actus et sources', () => {
+    const a = localAnswer('Que fait NVIDIA ?', store, { knowledge });
+    expect(a).toContain('Nvidia est une entreprise américaine.');
+    expect(a).toContain('PDG : **Jensen Huang**');
+    expect(a).toContain('[Nvidia bat les attentes](https://www.lesechos.fr/a)');
+    expect(a).toContain('_Sources ouvertes :_');
+  });
+  it('résultats : chiffres SEC', () => {
+    const a = localAnswer('Quel est le chiffre d’affaires de NVIDIA ?', store, { knowledge });
+    expect(a).toContain('Résultats officiels (SEC EDGAR)');
+    expect(a).toContain('130 Md$');
+    expect(a).toContain('+63 % sur un an');
+  });
+  it('actualité et dirigeant', () => {
+    expect(localAnswer('Pourquoi NVIDIA bouge ?', store, { knowledge })).toContain('Dernières actualités');
+    expect(localAnswer('Qui est le PDG de NVIDIA ?', store, { knowledge })).toContain('dirigée par **Jensen Huang**');
+  });
+});
+
 describe('rendu Markdown du chat', () => {
   it('échappe le HTML et n’autorise que les liens http(s)', () => {
     const h = renderMarkdown('<img src=x onerror=alert(1)> **gras** [ok](https://a.com) [ko](javascript:alert(1))');

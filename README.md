@@ -62,6 +62,18 @@ npm run lint     # vérification du code (ESLint)
 npm run check    # lint + tests + build (lancé automatiquement sur GitHub à chaque push)
 ```
 
+## Sources de données ouvertes (gratuites, sans clé)
+
+L’agent Orbit et les fiches s’appuient, à chaque question, sur des sources ouvertes interrogées par la fonction `/api/knowledge` (cache CDN de 30 min) :
+
+| Source | Ce qu’elle apporte | Licence |
+| --- | --- | --- |
+| **Wikipedia + Wikidata** | Présentation de l’entreprise, PDG, siège, date de création, effectifs, chiffre d’affaires | CC BY-SA / CC0 |
+| **GDELT** | Derniers articles de presse (français et anglais), mis à jour toutes les 15 min | Données ouvertes |
+| **SEC EDGAR** | Comptes officiels des sociétés américaines : chiffre d’affaires, résultat net, dernier trimestre, rapports 10-K / 10-Q / 8-K | Domaine public |
+
+Sans clé Perplexity, Orbit rédige ses réponses à partir de ces sources et les cite. Avec la clé, Perplexity les reçoit en plus de sa recherche web. La SEC demande un contact dans les requêtes : ajoutez sur Vercel la variable `SEC_USER_AGENT`, par exemple `AI Orbit votre@email.fr`. Sans elle, la SEC peut refuser les requêtes, et la partie « résultats » est alors simplement omise.
+
 ## Chatbot : relier Perplexity
 
 1. Créez une clé sur [perplexity.ai/settings/api](https://www.perplexity.ai/settings/api) (facturation à l’usage).
@@ -84,7 +96,8 @@ En local, `npm run dev` sert aussi les fonctions `/api` (même code que sur Verc
 ## Structure
 
 ```
-api/                  fonctions serveur Vercel : quotes, history, news (Yahoo Finance), chat (Perplexity)
+api/                  fonctions serveur Vercel : quotes, history, news (Yahoo Finance), chat (Perplexity),
+                      knowledge (Wikipedia/Wikidata, GDELT, SEC EDGAR — api/_lib/open.js)
 src/
   data/companies.js   univers des entreprises et domaines
   data/feed.js        store de cotations + fournisseurs API / Finnhub / DÉMO

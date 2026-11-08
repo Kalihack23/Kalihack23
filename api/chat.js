@@ -4,6 +4,8 @@
 // Sans clé PERPLEXITY_API_KEY (variable d'environnement Vercel) : 503 { error: 'no_key' } → l'interface
 // bascule alors sur l'assistant local.
 import { COMPANIES, DOMAINS } from '../src/data/companies.js';
+import { findCompanies } from '../src/data/assistant.js';
+import { getKnowledge, knowledgeDigest } from './_lib/open.js';
 
 const API_URL = 'https://api.perplexity.ai/chat/completions';
 const MAX_BODY = 16 * 1024;
@@ -21,7 +23,7 @@ const SYSTEM = `Tu es « Orbit », l'assistant du site AI Orbit, qui suit les en
 Règles :
 - Réponds en français, de façon claire et concise (180 mots maximum), avec des listes courtes si utile.
 - Concentre-toi sur ces entreprises, leur rôle dans l'IA, leur actualité et leurs cours. Si la question sort de ce cadre, ramène poliment vers ce sujet.
-- Pour les cours du jour, utilise en priorité les données « Cours en direct » fournies ci-dessous (elles viennent du site) ; complète avec tes recherches web pour l'actualité et cite tes sources.
+- Pour les cours du jour, utilise en priorité les données « Cours en direct » fournies ci-dessous (elles viennent du site). Appuie-toi aussi sur les « Données ouvertes » (Wikipedia/Wikidata, GDELT, SEC EDGAR) quand elles sont fournies ; complète avec tes recherches web et cite tes sources.
 - Mentionne les entreprises par leur symbole boursier entre parenthèses, par ex. NVIDIA (NVDA).
 - Ne donne jamais de conseil d'investissement personnalisé (pas de « achetez / vendez ») ; tu peux expliquer des faits et des tendances.
 
@@ -101,8 +103,18 @@ export default async function handler(req, res) {
   }
   if (!payload) return json(res, 400, { error: 'bad_request' });
 
+  // Données ouvertes (Wikipedia/Wikidata, GDELT, SEC) sur les entreprises citées — récupérées côté serveur.
+  const question = payload.messages[payload.messages.length - 1].content;
+  let mentioned = findCompanies(question).slice(0, 2);
+  if (!mentioned.length && payload.focus) mentioned = findCompanies(payload.focus).slice(0, 1);
+  const knowledge = (await Promise.all(mentioned.map((c) => Promise.race([
+    getKnowledge(c).catch(() => null),
+    new Promise((r) => setTimeout(() => r(null), 5000)),
+  ])))).filter(Boolean);
+  const openData = knowledge.map(knowledgeDigest).join('\n\n');
+
   const today = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'full', timeZone: 'Europe/Paris' }).format(new Date());
-  const system = `${SYSTEM}\n\nDate du jour : ${today}.${payload.focus ? `\nL'utilisateur consulte actuellement la fiche : ${payload.focus}.` : ''}${payload.live ? `\n\nCours en direct (site AI Orbit) :\n${payload.live}` : ''}`;
+  const system = `${SYSTEM}\n\nDate du jour : ${today}.${payload.focus ? `\nL'utilisateur consulte actuellement la fiche : ${payload.focus}.` : ''}${payload.live ? `\n\nCours en direct (site AI Orbit) :\n${payload.live}` : ''}${openData ? `\n\nDonnées ouvertes (Wikipedia/Wikidata, GDELT, SEC EDGAR) :\n${openData}` : ''}`;
 
   let upstream;
   try {
@@ -159,9 +171,11 @@ export default async function handler(req, res) {
   } catch {
     send({ type: 'error', error: 'stream_interrupted' });
   }
+  // Sources : celles de Perplexity, puis celles des données ouvertes utilisées.
+  for (const k of knowledge) for (const src of k.sources || []) sources.push({ title: `${src.name} — ${k.company.name}`, url: src.url });
   const safe = sources
     .filter((s) => /^https?:\/\//.test(s.url || ''))
-    .slice(0, 6)
+    .slice(0, 9)
     .map((s) => ({ title: String(s.title).slice(0, 120), url: s.url }));
   if (safe.length) send({ type: 'sources', items: safe });
   send({ type: 'done' });

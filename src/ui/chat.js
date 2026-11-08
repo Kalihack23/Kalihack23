@@ -6,6 +6,7 @@ import { COMPANIES } from '../data/companies.js';
 import { capOf } from '../data/derived.js';
 import { STATUS_LABEL, marketStatus } from '../data/markets.js';
 import { findCompanies, localAnswer } from '../data/assistant.js';
+import { fetchKnowledge } from '../data/history.js';
 import { fmtCap, fmtPct, fmtPrice, reducedMotion } from '../util.js';
 
 const byTicker = Object.fromEntries(COMPANIES.map((c) => [c.ticker, c]));
@@ -71,7 +72,7 @@ export function createChat({ fab, el, store, onSelect, getFocus }) {
 
   const setMode = (m) => {
     mode = m;
-    badge.textContent = m === 'perplexity' ? 'Perplexity' : m === 'local' ? 'Assistant local' : '';
+    badge.textContent = m === 'perplexity' ? 'Perplexity + sources ouvertes' : m === 'local' ? (store.mode === 'live' ? 'Sources ouvertes' : 'Assistant local') : '';
     badge.dataset.mode = m;
   };
 
@@ -120,9 +121,24 @@ export function createChat({ fab, el, store, onSelect, getFocus }) {
     return { quotes: [...set.values()].slice(0, 25), focus: focus ? `${focus.name} (${focus.ticker})` : '' };
   }
 
-  function answerLocally(question, div, noKey) {
-    const text = localAnswer(question, store, { focus: getFocus?.(), noKey });
-    div.querySelector('.msg-body').innerHTML = renderMarkdown(text);
+  // Mode gratuit : on interroge les sources ouvertes (Wikipedia/Wikidata, GDELT, SEC) pour les
+  // entreprises citées (ou la fiche ouverte), puis l'assistant local rédige la réponse.
+  async function answerLocally(question, div, noKey) {
+    const body = div.querySelector('.msg-body');
+    let targets = findCompanies(question).slice(0, 2);
+    const focus = getFocus?.();
+    if (!targets.length && focus) targets = [focus];
+    let knowledge = null;
+    if (targets.length && store.mode === 'live') {
+      body.innerHTML = '<span class="typing" aria-hidden="true"><i></i><i></i><i></i></span><span class="msg-status">Consulte Wikipedia, GDELT et la SEC…</span>';
+      const results = await Promise.all(targets.map((c) => fetchKnowledge(c)));
+      knowledge = {};
+      results.forEach((k, i) => { if (k) knowledge[targets[i].ticker] = k; });
+      if (!Object.keys(knowledge).length) knowledge = null;
+    }
+    const text = localAnswer(question, store, { focus, noKey, knowledge });
+    body.innerHTML = renderMarkdown(text);
+    log.scrollTop = log.scrollHeight;
     history.push({ role: 'assistant', content: text });
   }
 
@@ -139,7 +155,7 @@ export function createChat({ fab, el, store, onSelect, getFocus }) {
     if (mode === 'local' || store.mode === 'demo') {
       setMode('local');
       await new Promise((r) => setTimeout(r, reducedMotion ? 0 : 450));
-      answerLocally(question, div, true);
+      await answerLocally(question, div, true);
       return finish();
     }
 
@@ -152,7 +168,7 @@ export function createChat({ fab, el, store, onSelect, getFocus }) {
       });
       if (res.status === 503 || res.status === 404 || res.status === 405) {
         setMode('local');
-        answerLocally(question, div, true);
+        await answerLocally(question, div, true);
         return finish();
       }
       if (res.status === 429) {
@@ -201,7 +217,7 @@ export function createChat({ fab, el, store, onSelect, getFocus }) {
       history.push({ role: 'assistant', content: text.slice(0, 2000) });
     } catch {
       // Réseau indisponible ou erreur côté serveur : on répond quand même avec les données du site.
-      answerLocally(question, div, mode !== 'perplexity');
+      await answerLocally(question, div, mode !== 'perplexity');
       if (mode === 'unknown') setMode('local');
     }
     finish();
