@@ -37,6 +37,7 @@ export function themeColors() {
     privateFillOp: +v('--private-fill-op') || 0.05,
     shineOp: +v('--shine-op') || 0.32,
     coreFill: v('--core-fill') || '#2c2c2e',
+    gold: v('--gold') || '#ffd60a',
   };
   cacheTheme = t;
   return cache;

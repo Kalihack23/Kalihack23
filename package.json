@@ -12,6 +12,7 @@
     "check": "npm run lint && npm run test && npm run build"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "d3-array": "^3.2.5",
     "d3-drag": "^3.0.1",
     "d3-force": "^3.0.1",

@@ -125,12 +125,22 @@ const SUGGEST = '\n\nEssayez par exemple : « Combien vaut NVIDIA ? », « Top h
  * @param {{ get: Function, mode: string }} store
  * @param {{ focus?: object, noKey?: boolean, knowledge?: Record<string, object> }} [opts] knowledge : données ouvertes par symbole
  */
-export function localAnswer(question, store, { focus = null, noKey = false, knowledge = null } = {}) {
+export function localAnswer(question, store, { focus = null, noKey = false, knowledge = null, watchlist = [] } = {}) {
   const n = norm(question);
   let cos = findCompanies(question);
   if (!cos.length && focus && has(n, ['elle', 'cette', 'ce titre', 'cette action', 'pourquoi', 'que fait', 'combien', 'prix', 'cours'])) cos = [focus];
   const domain = findDomain(question);
   const footer = noKey && !knowledge ? '\n\n_Mode local : pour des réponses plus complètes, le site doit être en ligne (sources ouvertes) ou relié à une IA (Groq gratuit, Mistral ou Perplexity)._' : '';
+
+  // « Ma liste » : bilan des valeurs suivies.
+  if (has(n, ['ma liste', 'mes valeurs', 'mes favoris', 'mes actions', 'mon suivi'])) {
+    const rows = watchlist.map((t) => COMPANIES.find((c) => c.ticker === t)).filter((c) => c?.listed)
+      .map((c) => ({ c, q: store.get(c.ticker) })).filter(({ q }) => q)
+      .sort((a, b) => b.q.changePct - a.q.changePct);
+    if (!rows.length) return `Votre liste est vide : touchez l’étoile ☆ d’une valeur pour la suivre.${SUGGEST}`;
+    const avg = rows.reduce((s2, r) => s2 + r.q.changePct, 0) / rows.length;
+    return `**Votre liste** (${rows.length} valeurs) : en moyenne **${fmtPct(avg)}** aujourd’hui.\n${rows.slice(0, 10).map(({ c, q }) => `- ${line(c, q, store)}`).join('\n')}${rows.length > 10 ? `\n_+ ${rows.length - 10} autres_` : ''}${footer}`;
+  }
 
   const wantsUp = has(n, ['hausse', 'monte', 'gagn', 'meilleur', 'top', 'progress', 'grimpe']);
   const wantsDown = has(n, ['baisse', 'chute', 'perd', 'pire', 'recul', 'flop', 'degringol']);

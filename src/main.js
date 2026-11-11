@@ -12,11 +12,20 @@ import { createSegmented, initGlass } from './ui/glass.js';
 import { getTheme, onThemeChange, setTheme } from './ui/theme.js';
 import { buildCaption, renderShareImage } from './ui/share.js';
 import { createChat } from './ui/chat.js';
+import { createAccount } from './data/account.js';
+import { evaluateAlerts } from './data/alerts.js';
+import { createAccountUI } from './ui/account.js';
+import { toast } from './ui/toast.js';
 import { colorFor, fmtCap, fmtPct, reducedMotion } from './util.js';
 import { capOf, isStale } from './data/derived.js';
 
 const $ = (id) => document.getElementById(id);
 const store = createStore();
+// Compte utilisateur : Supabase si configuré (variables Vercel), sinon stockage sur cet appareil.
+const account = createAccount({
+  url: import.meta.env.VITE_SUPABASE_URL,
+  anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+});
 const listed = COMPANIES.filter((c) => c.listed);
 
 /* ---------- Source de données ---------- */
@@ -112,6 +121,8 @@ if (/Chrome\//.test(navigator.userAgent) && !/Edg\/|OPR\//.test(navigator.userAg
 const tooltip = createTooltip($('tooltip'), store);
 let galaxy;
 const panel = createPanel($('panel'), $('panel-body'), $('panel-close'), store, {
+  account,
+  onCreateAlert: () => accountUI?.open('alerts'),
   onClose: () => {
     galaxy?.setSelected(null);
     watchlist?.setSelected(null);
@@ -145,7 +156,11 @@ store.subscribe(() => {
   clearTimeout(relayoutTimer);
   relayoutTimer = setTimeout(() => galaxy.relayout(), 800);
 });
-const watchlist = createWatchlist($('watchlist'), store, { onSelect: select });
+const watchlist = createWatchlist($('watchlist'), store, {
+  onSelect: select,
+  account,
+  onSortChange: (sort) => savePref({ sort }),
+});
 
 /* ---------- Chatbot « Orbit » ---------- */
 const chat = createChat({
@@ -154,6 +169,7 @@ const chat = createChat({
   store,
   onSelect: select,
   getFocus: () => panel.current,
+  getWatchlist: () => [...account.watchlist],
 });
 // Onglet « Orbit » dans la barre du haut (ordinateur) : ouvre le chatbot.
 $('chat-tab').addEventListener('click', () => chat.open());
@@ -222,6 +238,7 @@ const viewSeg = createSegmented($('view-seg'), {
     if (mode === 'list') return; // mobile : la liste de valeurs remplace la scène
     galaxy.setMode(mode);
     showHint(HINTS[mode]);
+    savePref({ view: mode });
   },
 });
 
@@ -298,6 +315,7 @@ const themeSeg = createSegmented($('theme-seg'), {
 });
 onThemeChange((t) => {
   themeSeg.select(t, { emit: false });
+  savePref({ theme: t });
   $('theme-toggle').setAttribute('aria-label', t === 'light' ? 'Passer au thème sombre' : 'Passer au thème clair');
   updateStats();
 });
@@ -371,4 +389,68 @@ $('share-native').addEventListener('click', async () => {
     if (navigator.canShare?.(payload)) await navigator.share(payload);
     else await navigator.share({ title: 'AI Orbit', text: $('share-caption').value, url: location.href });
   } catch { /* partage annulé */ }
+});
+
+/* ---------- Compte : préférences, favoris, alertes, portefeuilles partagés ---------- */
+let applyingPrefs = false;
+function savePref(patch) {
+  if (applyingPrefs) return;
+  const cur = account.prefs;
+  if (Object.entries(patch).every(([k, v]) => cur[k] === v)) return;
+  account.savePrefs(patch);
+}
+// Applique les préférences enregistrées (au démarrage et à la connexion).
+function applyPrefs() {
+  const p = account.prefs;
+  applyingPrefs = true;
+  try {
+    if (p.theme && p.theme !== getTheme()) setTheme(p.theme);
+    if (p.view && p.view !== viewSeg.value && !(p.view === 'list' && wide.matches)) viewSeg.select(p.view);
+    if (p.sort) watchlist.setSort(p.sort);
+  } finally {
+    applyingPrefs = false;
+  }
+}
+
+const accountUI = createAccountUI({
+  dialog: $('account'),
+  button: $('open-account'),
+  account,
+  store,
+  onSelect: select,
+  prefs: {
+    current: () => ({ theme: getTheme(), view: viewSeg.value, sort: account.prefs.sort || 'change' }),
+    set: (patch) => {
+      account.savePrefs(patch);
+      applyPrefs();
+    },
+    getFocus: () => panel.current,
+  },
+});
+
+account.onChange((ev) => {
+  galaxy.setFavorites(account.watchlist);
+  if (ev.type === 'signin') applyPrefs();
+});
+
+// Alertes de prix : vérifiées toutes les 5 s sur les cours réels.
+setInterval(() => {
+  const alerts = account.alerts;
+  if (!alerts.length) return;
+  for (const hit of evaluateAlerts(alerts, (t) => store.get(t))) {
+    account.markTriggered(hit.alert.id);
+    const co = COMPANIES.find((c) => c.ticker === hit.alert.ticker);
+    toast(hit.title, { body: hit.body, tone: hit.quote.changePct >= 0 ? 'up' : 'down', duration: 10000, action: co ? { label: 'Voir', onClick: () => select(co) } : null });
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try { new Notification(hit.title, { body: hit.body, icon: '/icon-192.png', tag: `alert-${hit.alert.id}` }); } catch { /* notifications indisponibles */ }
+    }
+  }
+}, 5000);
+
+account.init().then(() => {
+  applyPrefs();
+  galaxy.setFavorites(account.watchlist);
+  // Lien de partage d'un portefeuille : ?portfolio=xxxx
+  const slug = new URLSearchParams(location.search).get('portfolio');
+  if (slug) accountUI.openShared(slug);
 });

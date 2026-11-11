@@ -13,12 +13,13 @@ import { onThemeChange } from './theme.js';
 
 const PILL_MODES = ['pct', 'price', 'cap'];
 
-export function createWatchlist(el, store, { onSelect } = {}) {
+export function createWatchlist(el, store, { onSelect, account, onSortChange } = {}) {
   const listed = COMPANIES.filter((c) => c.listed);
   let sort = 'change';
   let pillMode = 'pct';
   let filter = { domains: null, query: '' };
   let selected = null;
+  let onlyMine = false;
 
   const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' });
   el.innerHTML = `
@@ -27,7 +28,10 @@ export function createWatchlist(el, store, { onSelect } = {}) {
         <h2>Valeurs</h2>
         <p class="wl-date" id="wl-date">${dateFmt.format(new Date())}</p>
       </div>
-      <span class="wl-count" id="wl-count"></span>
+      <div class="wl-head-right">
+        <button type="button" class="wl-mine" id="wl-mine" aria-pressed="false" title="N’afficher que les valeurs suivies">★ Ma liste</button>
+        <span class="wl-count" id="wl-count"></span>
+      </div>
     </header>
     <div class="wl-sort" id="wl-sort"></div>
     <ul class="wl-list" id="wl-list" aria-label="Valeurs"></ul>`;
@@ -35,7 +39,7 @@ export function createWatchlist(el, store, { onSelect } = {}) {
   // La date suit le jour (si la page reste ouverte après minuit).
   setInterval(() => { el.querySelector('#wl-date').textContent = dateFmt.format(new Date()); }, 60000);
 
-  createSegmented(el.querySelector('#wl-sort'), {
+  const sortSeg = createSegmented(el.querySelector('#wl-sort'), {
     label: 'Tri',
     value: sort,
     items: [
@@ -46,7 +50,15 @@ export function createWatchlist(el, store, { onSelect } = {}) {
     onChange: (id) => {
       sort = id;
       reorder(true);
+      onSortChange?.(id);
     },
+  });
+
+  const mineBtn = el.querySelector('#wl-mine');
+  mineBtn.addEventListener('click', () => {
+    onlyMine = !onlyMine;
+    mineBtn.setAttribute('aria-pressed', String(onlyMine));
+    reorder(true);
   });
 
   const rows = new Map();
@@ -59,9 +71,16 @@ export function createWatchlist(el, store, { onSelect } = {}) {
         <span class="wl-id"><b>${co.ticker}</b><small>${co.name}</small></span>
         <span class="wl-spark" aria-hidden="true"></span>
       </button>
+      <button class="wl-star" type="button" aria-pressed="false" aria-label="Suivre ${co.name}">☆</button>
       <button class="wl-pill" type="button" title="Changer l’affichage (%, prix, capitalisation)"></button>`;
     li.style.setProperty('--dc', domainById[co.domain].color);
     li.querySelector('.wl-main').addEventListener('click', () => onSelect?.(co));
+    li.querySelector('.wl-star').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const on = await account?.toggleWatch(co.ticker);
+      if (!reducedMotion) gsap.fromTo(e.currentTarget, { scale: 0.6 }, { scale: 1, duration: 0.6, ease: 'elastic.out(1.2, 0.4)' });
+      if (on === false && onlyMine) reorder(true);
+    });
     li.querySelector('.wl-pill').addEventListener('click', (e) => {
       e.stopPropagation();
       pillMode = PILL_MODES[(PILL_MODES.indexOf(pillMode) + 1) % PILL_MODES.length];
@@ -70,7 +89,7 @@ export function createWatchlist(el, store, { onSelect } = {}) {
       if (!reducedMotion) gsap.fromTo(ul.querySelectorAll('.wl-pill'), { scale: 0.9 }, { scale: 1, duration: 0.5, ease: 'elastic.out(1, 0.5)', stagger: 0.004 });
     });
     ul.appendChild(li);
-    rows.set(co.ticker, { co, li, pill: li.querySelector('.wl-pill'), spark: li.querySelector('.wl-spark'), lastSpark: -Infinity });
+    rows.set(co.ticker, { co, li, pill: li.querySelector('.wl-pill'), star: li.querySelector('.wl-star'), spark: li.querySelector('.wl-spark'), lastSpark: -Infinity });
   }
 
   function pillText(q, co) {
@@ -103,6 +122,7 @@ export function createWatchlist(el, store, { onSelect } = {}) {
   }
 
   const visible = (co) => {
+    if (onlyMine && !account?.isWatched(co.ticker)) return false;
     if (filter.domains && !filter.domains.has(co.domain)) return false;
     const q = filter.query;
     return !q || co.ticker.toLowerCase().includes(q) || co.name.toLowerCase().includes(q) || domainById[co.domain].name.toLowerCase().includes(q);
@@ -125,6 +145,7 @@ export function createWatchlist(el, store, { onSelect } = {}) {
       ul.appendChild(r.li);
     }
     el.querySelector('#wl-count').textContent = `${n}`;
+    ul.dataset.empty = onlyMine && !n ? 'Touchez ☆ pour suivre une valeur' : '';
     if (animate && !reducedMotion) {
       for (const r of sorted) {
         if (r.li.hidden) continue;
@@ -148,7 +169,25 @@ export function createWatchlist(el, store, { onSelect } = {}) {
   // Retri périodique par variation (évite que la liste « saute » à chaque cotation).
   setInterval(() => { if (sort === 'change' && !el.matches(':hover')) reorder(true); }, 4000);
 
+  // Étoiles : reflètent la liste de suivi du compte.
+  function paintStars() {
+    for (const r of rows.values()) {
+      const on = !!account?.isWatched(r.co.ticker);
+      r.star.textContent = on ? '★' : '☆';
+      r.star.classList.toggle('on', on);
+      r.star.setAttribute('aria-pressed', String(on));
+      r.star.setAttribute('aria-label', `${on ? 'Ne plus suivre' : 'Suivre'} ${r.co.name}`);
+    }
+    if (onlyMine) reorder(false);
+  }
+  account?.onChange((ev) => { if (ev.type === 'change' || ev.type === 'signin' || ev.type === 'signout') paintStars(); });
+  paintStars();
+
   return {
+    setSort(id) {
+      if (id && id !== sort) sortSeg.select(id, { emit: false });
+      if (id) { sort = id; reorder(true); }
+    },
     setFilter({ activeDomains, query }) {
       filter = { domains: activeDomains, query: (query || '').trim().toLowerCase() };
       reorder(false);

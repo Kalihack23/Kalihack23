@@ -536,6 +536,11 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
     for (const n of nodes) n.sel = n.co.ticker === ticker;
   }
 
+  // Valeurs suivies (liste du compte) : anneau doré.
+  function setFavorites(set) {
+    for (const n of nodes) n.fav = set.has(n.co.ticker);
+  }
+
   /* ---------- Cotations ---------- */
   function onQuote(q, animate = true) {
     const n = byTicker[q.ticker];
@@ -686,11 +691,12 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
       } else if (n.glowHidden !== true) { n.el.glow.style.display = 'none'; n.glowHidden = true; }
 
       // Anneau de sélection / recherche — idem.
-      const haloOp = Math.max(n.hl, n.sel ? 1 : 0);
+      // Anneau : sélection (blanc/noir), recherche (couleur du domaine), valeur suivie (or).
+      const haloOp = Math.max(n.hl, n.sel ? 1 : 0, n.fav ? 0.75 : 0);
       if (haloOp > 0.005) {
         if (n.haloHidden !== false) { n.el.halo.style.display = ''; n.haloHidden = false; }
-        n.el.halo.setAttribute('r', (r + 4 + Math.sin(time * 4) * 1.5).toFixed(2));
-        n.el.halo.setAttribute('stroke', n.sel ? themeColors().text : n.dom.color);
+        n.el.halo.setAttribute('r', (r + 4 + (n.sel || n.hl > 0.1 ? Math.sin(time * 4) * 1.5 : 0)).toFixed(2));
+        n.el.halo.setAttribute('stroke', n.sel ? themeColors().text : n.hl > 0.1 ? n.dom.color : themeColors().gold);
         n.el.halo.setAttribute('stroke-opacity', (haloOp * 0.9).toFixed(3));
       } else if (n.haloHidden !== true) { n.el.halo.style.display = 'none'; n.haloHidden = true; }
 
@@ -780,5 +786,5 @@ export function createGalaxy(svgEl, store, { onSelect, onHover, onLeave, onBackg
   }
 
   refreshLabels();
-  return { setMode, setFilter, setSelected, setIndex, snapshot, relayout, zoomTo: (id) => zoomTo(id ? domById[id] : null) };
+  return { setMode, setFilter, setSelected, setFavorites, setIndex, snapshot, relayout, zoomTo: (id) => zoomTo(id ? domById[id] : null) };
 }

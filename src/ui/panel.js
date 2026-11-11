@@ -91,7 +91,7 @@ const esc = (str) => String(str ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp
 const numFmt = (v, cur) => fmtPrice(v, cur).replace(/\s?[^\d\s,.\u202f-]+$/u, '').trim();
 const signed = (v, cur) => `${v >= 0 ? '+' : '−'}${numFmt(Math.abs(v), cur)}`;
 
-export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
+export function createPanel(el, body, closeBtn, store, { onClose, account, onCreateAlert } = {}) {
   let current = null;
   let range = 'live';
   let reqId = 0;
@@ -139,6 +139,10 @@ export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
       <header class="p-head">
         <h2 class="p-symbol">${listed ? esc(co.ticker) : esc(co.name)}</h2>
         <div class="p-name">${listed ? `${esc(co.name)} · ` : ''}<span style="color:${dom.color}">${dom.short}</span></div>
+        <div class="p-head-actions">
+          <button type="button" class="p-star glass" id="p-star" aria-pressed="false">☆ Suivre</button>
+          ${listed ? '<button type="button" class="p-alert glass" id="p-alert">🔔 Créer une alerte</button>' : ''}
+        </div>
       </header>
       <div class="p-quote">
         <div class="p-price-row"><span class="p-price" id="p-price">${listed ? numFmt(q.price, q.currency) : fmtCap(co.cap)}</span>${listed ? `<span class="p-cur">${co.currency}</span>` : ''}</div>
@@ -180,6 +184,12 @@ export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
       paintMarket(co, q);
       drawChart(true);
     }
+    paintStar();
+    body.querySelector('#p-star').addEventListener('click', async (e) => {
+      await account?.toggleWatch(co.ticker);
+      if (!reducedMotion) gsap.fromTo(e.currentTarget, { scale: 0.85 }, { scale: 1, duration: 0.6, ease: 'elastic.out(1.2, 0.4)' });
+    });
+    body.querySelector('#p-alert')?.addEventListener('click', () => onCreateAlert?.(co));
     loadNews(co);
     loadAbout(co);
   }
@@ -258,6 +268,16 @@ export function createPanel(el, body, closeBtn, store, { onClose } = {}) {
     simEl.textContent = data.simulated ? 'Historique simulé (démo)' : '';
     restoreHeader(true);
   }
+
+  function paintStar() {
+    const b = body.querySelector('#p-star');
+    if (!b || !current) return;
+    const on = !!account?.isWatched(current.ticker);
+    b.textContent = on ? '★ Suivie' : '☆ Suivre';
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', String(on));
+  }
+  account?.onChange(() => paintStar());
 
   // Données ouvertes : résumé Wikipedia, fiche Wikidata et résultats SEC (invisibles si indisponibles).
   async function loadAbout(co) {

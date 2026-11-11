@@ -29,6 +29,12 @@ Un site interactif qui regroupe les entreprises qui construisent l’intelligenc
 - **Partager** : génère une **image 1080×1350** (format Instagram, TikTok ou X) du tableau de bord, avec l’indice IA et le top 3 des hausses et des baisses. Une **légende est prête à poster**. Sur mobile, le bouton ouvre le partage natif.
 - **Thème clair ou sombre** : se choisit avec le bouton soleil/lune (révélation circulaire, comme sur macOS) ou dans les Réglages. Le choix est mémorisé. À la première visite, le site suit le réglage de l'appareil. Le thème clair reprend le mode clair d'iOS, et l'image de partage suit le thème actif.
 - **Bulles vivantes** : dans chaque domaine, les bulles tournent lentement autour du centre, dérivent et « respirent ». Elles s'écartent quand la souris passe, puis reviennent avec un ressort. Sur iPhone et iPad, elles glissent selon l'inclinaison de l'appareil (gyroscope), en parallaxe : les petites bulles bougent plus que les grandes.
+- **Compte (gratuit, facultatif)** : connexion par **lien reçu par e-mail** (sans mot de passe) ou avec Google. Le compte synchronise sur tous les appareils :
+  - la **liste de suivi** : ☆ sur chaque ligne et dans la fiche, filtre « ★ Ma liste », anneau doré autour des bulles suivies, et Orbit répond à « Comment va ma liste ? » ;
+  - les **alertes de cours** (au-dessus de, en dessous de, variation du jour de ± X %) : une notification dans le site et dans le navigateur, au plus une fois par jour et par alerte, **tant que le site est ouvert** ;
+  - les **portefeuilles virtuels** (« Mon ETF IA ») : modèles prêts à l’emploi ou votre liste, performance depuis la création comparée à l’indice AI Orbit, et lien de partage public `?portfolio=…` ;
+  - les **préférences** : thème, vue, tri.
+  Sans compte, tout fonctionne aussi, enregistré sur l’appareil. À la première connexion, ces données sont ajoutées au compte.
 - Filtres par domaine, recherche (Entrée ouvre la fiche), version mobile, `prefers-reduced-motion` (aucune animation).
 
 ## Données
@@ -98,6 +104,22 @@ Les clés restent côté serveur. Groq et Mistral n’ayant pas d’accès au we
 
 La clé reste côté serveur (fonction `/api/chat`) et n’est jamais envoyée au navigateur. Pour limiter les coûts, chaque question fait 600 caractères au maximum, la conversation est limitée à 10 messages, chaque réponse à environ 700 jetons, et chaque visiteur à 8 questions par minute.
 
+## Comptes utilisateurs : relier Supabase (gratuit)
+
+1. Créez un projet gratuit sur [supabase.com](https://supabase.com) (*New project*, région Europe conseillée).
+2. *SQL Editor → New query* : collez tout le contenu de [`supabase/schema.sql`](supabase/schema.sql), puis *Run*. Le script crée les tables (profils, liste de suivi, alertes, portefeuilles) et active la **sécurité par ligne** : chaque utilisateur ne voit que ses propres données. Il peut être relancé sans risque.
+3. *Authentication → URL Configuration* :
+   - **Site URL** : l’adresse du site, par ex. `https://kalihack23-isgu.vercel.app` ;
+   - **Redirect URLs** : la même adresse suivie de `/**`, plus `http://localhost:5173/**` pour le développement.
+4. *Project Settings → API* : notez la **Project URL**, la clé **anon public** et la clé **service_role**.
+5. Sur Vercel, *Settings → Environment Variables* :
+   - `VITE_SUPABASE_URL` : la Project URL ;
+   - `VITE_SUPABASE_ANON_KEY` : la clé anon (publique par nature, protégée par la sécurité par ligne) ;
+   - `SUPABASE_SERVICE_ROLE_KEY` : la clé service_role. Elle est **secrète** : elle ne sert qu’à la fonction serveur `/api/account-delete` (« Supprimer mon compte ») et n’est jamais envoyée au navigateur.
+6. Redéployez. Le bouton « Compte » (en haut à droite) propose alors la connexion.
+
+Facultatif : la connexion avec Google s’active dans *Authentication → Providers → Google* (identifiants OAuth créés sur Google Cloud Console). Les e-mails de connexion de Supabase sont limités à quelques envois par heure sur l’offre gratuite. Pour plus, branchez votre propre SMTP dans *Authentication → Emails*.
+
 ## Mise en ligne sur Vercel
 
 1. Créez un compte sur [vercel.com](https://vercel.com) avec votre GitHub.
@@ -113,7 +135,9 @@ En local, `npm run dev` sert aussi les fonctions `/api` (même code que sur Verc
 
 ```
 api/                  fonctions serveur Vercel : quotes, history, news (Yahoo Finance), chat (Perplexity),
-                      knowledge (Wikipedia/Wikidata, GDELT, SEC EDGAR — api/_lib/open.js)
+                      knowledge (Wikipedia/Wikidata, GDELT, SEC EDGAR — api/_lib/open.js),
+                      account-delete (suppression de compte Supabase)
+supabase/schema.sql   tables + sécurité par ligne des comptes
 src/
   data/companies.js   univers des entreprises et domaines
   data/feed.js        store de cotations + fournisseurs API / Finnhub / DÉMO
@@ -121,16 +145,21 @@ src/
   data/markets.js     horaires des bourses (marché ouvert / fermé)
   data/derived.js     capitalisation réelle ou estimée, valeurs non actualisées
   data/assistant.js   assistant local du chatbot (sans clé)
+  data/account.js     compte : Supabase ou stockage local, fusion à la connexion
+  data/alerts.js      évaluation des alertes de cours
+  data/portfolio.js   portefeuilles virtuels (modèles, performance vs indice)
   viz/galaxy.js       visualisation D3 + GSAP (Galaxie ⇄ Orbites)
   viz/historyChart.js graphique façon app Bourse (scrubbing) + mini-courbes
   ui/glass.js         composants Liquid Glass (contrôle segmenté, reflets, ressorts)
   ui/theme.js         thème clair / sombre (mémorisé, suit le système)
   ui/watchlist.js     liste de valeurs façon app Bourse
   ui/chat.js          chatbot « Orbit » (interface, flux Perplexity, Markdown sûr)
+  ui/account.js       feuille Compte : connexion, ma liste, alertes, portefeuilles, préférences
+  ui/toast.js         notifications dans le site
   ui/                 bandeau, panneau, infobulle, classement, réglages, ambiance, partage
   main.js             assemblage
 public/               icônes, manifeste (installation), image d’aperçu og.png
 tests/                tests unitaires (formatage, données, horaires, fonctions /api)
 ```
 
-Stack : Vite, D3 v7, GSAP 3, JavaScript sans framework.
+Stack : Vite, D3 v7, GSAP 3, Supabase (comptes), JavaScript sans framework.

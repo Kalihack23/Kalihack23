@@ -7,7 +7,7 @@ export default [
   {
     files: ['src/**/*.js'],
     languageOptions: { ecmaVersion: 2023, sourceType: 'module', globals: { ...globals.browser } },
-    rules: { 'no-unused-vars': ['error', { argsIgnorePattern: '^_' }], 'no-empty': ['error', { allowEmptyCatch: true }] },
+    rules: { 'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', destructuredArrayIgnorePattern: '^_' }], 'no-empty': ['error', { allowEmptyCatch: true }] },
   },
   {
     files: ['api/**/*.js', 'vite.config.js', 'eslint.config.js', 'tests/**/*.js'],

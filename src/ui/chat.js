@@ -57,7 +57,7 @@ export function renderMarkdown(md, sources = []) {
   return out.join('');
 }
 
-export function createChat({ fab, el, store, onSelect, getFocus }) {
+export function createChat({ fab, el, store, onSelect, getFocus, getWatchlist }) {
   const log = el.querySelector('#chat-log');
   const form = el.querySelector('#chat-form');
   const input = el.querySelector('#chat-input');
@@ -79,9 +79,10 @@ export function createChat({ fab, el, store, onSelect, getFocus }) {
 
   function suggestions() {
     const f = getFocus?.();
+    const mine = getWatchlist?.() || [];
     const items = f
       ? [`Pourquoi ${f.name} bouge aujourd’hui ?`, `Que fait ${f.name} dans l’IA ?`, `Compare ${f.name} et NVIDIA`, 'Top hausses du jour']
-      : ['Pourquoi NVIDIA bouge aujourd’hui ?', 'Top hausses du jour', 'Compare AMD et NVIDIA', 'Qui alimente les datacenters en énergie ?'];
+      : [...(mine.length ? ['Comment va ma liste aujourd’hui ?'] : []), 'Pourquoi NVIDIA bouge aujourd’hui ?', 'Top hausses du jour', 'Compare AMD et NVIDIA', 'Qui alimente les datacenters en énergie ?'].slice(0, 4);
     suggestEl.innerHTML = items.map((s) => `<button type="button" class="chip-suggest">${esc(s)}</button>`).join('');
     suggestEl.hidden = history.length > 0;
   }
@@ -115,11 +116,14 @@ export function createChat({ fab, el, store, onSelect, getFocus }) {
     };
     findCompanies(question).forEach(add);
     add(focus);
+    // Valeurs suivies par l'utilisateur (« ma liste »).
+    const mine = getWatchlist?.() || [];
+    if (/ma liste|mes valeurs|mes favoris|mon portefeuille/i.test(question)) mine.slice(0, 15).forEach((t) => add(byTicker[t]));
     const listed = COMPANIES.filter((c) => c.listed).map((c) => ({ c, q: store.get(c.ticker) })).filter(({ q }) => q);
     listed.sort((a, b) => b.q.changePct - a.q.changePct);
     listed.slice(0, 5).forEach(({ c }) => add(c));
     listed.slice(-5).forEach(({ c }) => add(c));
-    return { quotes: [...set.values()].slice(0, 25), focus: focus ? `${focus.name} (${focus.ticker})` : '' };
+    return { quotes: [...set.values()].slice(0, 25), focus: focus ? `${focus.name} (${focus.ticker})` : '', watchlist: mine.slice(0, 30) };
   }
 
   // Mode gratuit : on interroge les sources ouvertes (Wikipedia/Wikidata, GDELT, SEC) pour les
@@ -137,7 +141,7 @@ export function createChat({ fab, el, store, onSelect, getFocus }) {
       results.forEach((k, i) => { if (k) knowledge[targets[i].ticker] = k; });
       if (!Object.keys(knowledge).length) knowledge = null;
     }
-    const text = localAnswer(question, store, { focus, noKey, knowledge });
+    const text = localAnswer(question, store, { focus, noKey, knowledge, watchlist: getWatchlist?.() || [] });
     body.innerHTML = renderMarkdown(text);
     log.scrollTop = log.scrollHeight;
     history.push({ role: 'assistant', content: text });

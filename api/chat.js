@@ -120,7 +120,8 @@ export function sanitize(payload) {
     .map((q) => `${String(q.ticker).slice(0, 12)} ${String(q.name || '').slice(0, 40)} : ${String(q.price || '').slice(0, 20)} (${String(q.change || '').slice(0, 12)} aujourd'hui), cap. ${String(q.cap || '').slice(0, 16)}, ${String(q.market || '').slice(0, 20)}`)
     .join('\n');
   const focus = typeof payload.context?.focus === 'string' ? payload.context.focus.slice(0, 60) : '';
-  return { messages: alternated, live, focus };
+  const watchlist = Array.isArray(payload.context?.watchlist) ? payload.context.watchlist.filter((t) => typeof t === 'string').slice(0, 30).map((t) => t.slice(0, 12)) : [];
+  return { messages: alternated, live, focus, watchlist };
 }
 
 const NO_WEB = `\n- Tu n'as pas d'accès direct au web : base-toi sur les données fournies ci-dessous (cours en direct, Wikipedia/Wikidata, GDELT, SEC) et sur tes connaissances générales. N'invente aucun chiffre ni aucune actualité ; si une information manque ou peut être datée, dis-le. Pour l'actualité, cite les articles GDELT fournis (titre + lien).`;
@@ -176,7 +177,7 @@ export default async function handler(req, res) {
   const openData = knowledge.map(knowledgeDigest).join('\n\n');
 
   const today = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'full', timeZone: 'Europe/Paris' }).format(new Date());
-  const system = `${SYSTEM}\n\nDate du jour : ${today}.${payload.focus ? `\nL'utilisateur consulte actuellement la fiche : ${payload.focus}.` : ''}${payload.live ? `\n\nCours en direct (site AI Orbit) :\n${payload.live}` : ''}${openData ? `\n\nDonnées ouvertes (Wikipedia/Wikidata, GDELT, SEC EDGAR) :\n${openData}` : ''}`;
+  const system = `${SYSTEM}\n\nDate du jour : ${today}.${payload.focus ? `\nL'utilisateur consulte actuellement la fiche : ${payload.focus}.` : ''}${payload.watchlist.length ? `\nValeurs suivies par l'utilisateur (« sa liste ») : ${payload.watchlist.join(', ')}.` : ''}${payload.live ? `\n\nCours en direct (site AI Orbit) :\n${payload.live}` : ''}${openData ? `\n\nDonnées ouvertes (Wikipedia/Wikidata, GDELT, SEC EDGAR) :\n${openData}` : ''}`;
 
   // Premier fournisseur qui répond (bascule automatique en cas de quota dépassé ou de panne).
   let upstream = null;
