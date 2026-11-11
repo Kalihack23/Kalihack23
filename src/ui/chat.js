@@ -65,14 +65,15 @@ export function createChat({ fab, el, store, onSelect, getFocus }) {
   const suggestEl = el.querySelector('#chat-suggest');
   const badge = el.querySelector('#chat-mode');
   const history = []; // { role, content }
-  let mode = 'unknown'; // 'perplexity' | 'local'
+  let mode = 'unknown'; // 'ai' | 'local'
   let busy = false;
   let lastFocus = null;
   el.inert = true;
 
-  const setMode = (m) => {
+  // mode : 'ai' (Groq, Mistral ou Perplexity via /api/chat) | 'local' (sources ouvertes / données du site)
+  const setMode = (m, label = '') => {
     mode = m;
-    badge.textContent = m === 'perplexity' ? 'Perplexity + sources ouvertes' : m === 'local' ? (store.mode === 'live' ? 'Sources ouvertes' : 'Assistant local') : '';
+    badge.textContent = m === 'ai' ? `${label || 'IA'} + sources ouvertes` : m === 'local' ? (store.mode === 'live' ? 'Sources ouvertes' : 'Assistant local') : '';
     badge.dataset.mode = m;
   };
 
@@ -177,7 +178,7 @@ export function createChat({ fab, el, store, onSelect, getFocus }) {
         return finish();
       }
       if (!res.ok || !res.body) throw new Error(res.status);
-      setMode('perplexity');
+      setMode('ai');
 
       // Lecture du flux SSE et affichage au fil de l'eau.
       const reader = res.body.getReader();
@@ -201,6 +202,7 @@ export function createChat({ fab, el, store, onSelect, getFocus }) {
           buf = buf.slice(i + 2);
           let msg;
           try { msg = JSON.parse(evt); } catch { continue; }
+          if (msg.type === 'meta') setMode('ai', `${msg.label}${msg.model ? ` · ${String(msg.model).split('/').pop()}` : ''}`);
           if (msg.type === 'delta') text += msg.text;
           if (msg.type === 'sources') sources = msg.items || [];
           if (!pending) { pending = true; requestAnimationFrame(paint); }
@@ -217,7 +219,7 @@ export function createChat({ fab, el, store, onSelect, getFocus }) {
       history.push({ role: 'assistant', content: text.slice(0, 2000) });
     } catch {
       // Réseau indisponible ou erreur côté serveur : on répond quand même avec les données du site.
-      await answerLocally(question, div, mode !== 'perplexity');
+      await answerLocally(question, div, mode !== 'ai');
       if (mode === 'unknown') setMode('local');
     }
     finish();

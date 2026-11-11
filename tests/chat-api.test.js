@@ -28,8 +28,10 @@ beforeEach(() => vi.resetModules());
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 
 describe('/api/chat', () => {
-  it('503 sans clé Perplexity (l’interface passe en assistant local)', async () => {
+  it('503 sans aucune clé (l’interface passe en assistant local)', async () => {
     vi.stubEnv('PERPLEXITY_API_KEY', '');
+    vi.stubEnv('GROQ_API_KEY', '');
+    vi.stubEnv('MISTRAL_API_KEY', '');
     expect((await call(ask('bonjour'))).statusCode).toBe(503);
   });
   it('refuse les requêtes invalides ou trop grosses', async () => {
@@ -48,6 +50,7 @@ describe('/api/chat', () => {
     const res = await call(ask('Pourquoi NVIDIA monte ?'), { ip: 'd' });
     expect(res.statusCode).toBe(200);
     const events = res.chunks.map((c) => JSON.parse(c.replace(/^data: /, '')));
+    expect(events[0]).toMatchObject({ type: 'meta', provider: 'perplexity' });
     expect(events.filter((e) => e.type === 'delta').map((e) => e.text).join('')).toBe('NVIDIA (NVDA) monte.');
     expect(events.find((e) => e.type === 'sources').items).toEqual([{ title: 'Reuters', url: 'https://reuters.com/a' }]);
     expect(events.at(-1).type).toBe('done');
@@ -56,6 +59,42 @@ describe('/api/chat', () => {
     expect(sent.messages[0].role).toBe('system');
     expect(sent.messages[0].content).toContain('NVDA NVIDIA : 185 $');
     expect(pplx[1].headers.Authorization).toBe('Bearer k');
+  });
+  it('Groq (gratuit) est choisi en priorité, avec son modèle open source et le méta-événement', async () => {
+    vi.stubEnv('PERPLEXITY_API_KEY', 'p');
+    vi.stubEnv('GROQ_API_KEY', 'g');
+    const fetchMock = vi.fn(async (url) => (String(url).includes('groq.com')
+      ? { ok: true, status: 200, body: sse([{ choices: [{ delta: { content: 'Réponse Groq' } }] }]) }
+      : { ok: false, status: 404, text: async () => '' }));
+    globalThis.fetch = fetchMock;
+    const res = await call(ask('Top hausses ?'), { ip: 'g1' });
+    const events = res.chunks.map((c) => JSON.parse(c.replace(/^data: /, '')));
+    expect(events[0]).toMatchObject({ type: 'meta', provider: 'groq', label: 'Groq', model: 'openai/gpt-oss-120b' });
+    expect(events.find((e) => e.type === 'delta').text).toBe('Réponse Groq');
+    const groq = fetchMock.mock.calls.find(([u]) => String(u).includes('groq.com'));
+    const body = JSON.parse(groq[1].body);
+    expect(body.messages[0].content).toContain("Tu n'as pas d'accès direct au web");
+    expect(groq[1].headers.Authorization).toBe('Bearer g');
+    expect(fetchMock.mock.calls.some(([u]) => String(u).includes('perplexity'))).toBe(false);
+  });
+  it('bascule sur le fournisseur suivant si le premier est à court de quota (429)', async () => {
+    vi.stubEnv('GROQ_API_KEY', 'g');
+    vi.stubEnv('MISTRAL_API_KEY', 'm');
+    globalThis.fetch = vi.fn(async (url) => {
+      if (String(url).includes('groq.com')) return { ok: false, status: 429, body: null };
+      if (String(url).includes('mistral.ai')) return { ok: true, status: 200, body: sse([{ choices: [{ delta: { content: 'Réponse Mistral' } }] }]) };
+      return { ok: false, status: 404, text: async () => '' };
+    });
+    const res = await call(ask('Top hausses ?'), { ip: 'm1' });
+    const events = res.chunks.map((c) => JSON.parse(c.replace(/^data: /, '')));
+    expect(events[0]).toMatchObject({ provider: 'mistral' });
+    expect(events.find((e) => e.type === 'delta').text).toBe('Réponse Mistral');
+  });
+  it('CHAT_PROVIDER impose un fournisseur', async () => {
+    const { availableProviders } = await import('../api/chat.js');
+    expect(availableProviders({ GROQ_API_KEY: 'g', PERPLEXITY_API_KEY: 'p', CHAT_PROVIDER: 'perplexity' })).toEqual(['perplexity', 'groq']);
+    expect(availableProviders({ MISTRAL_API_KEY: 'm' })).toEqual(['mistral']);
+    expect(availableProviders({})).toEqual([]);
   });
   it('limite le nombre de questions par minute', async () => {
     vi.stubEnv('PERPLEXITY_API_KEY', 'k');

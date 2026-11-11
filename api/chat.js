@@ -1,13 +1,51 @@
-// POST /api/chat → assistant « Orbit » relié à Perplexity (API compatible OpenAI, avec recherche web).
+// POST /api/chat → assistant « Orbit ». Fournisseurs (API compatibles OpenAI), au choix :
+//  - Groq      (GRATUIT, sans carte bancaire) : modèle open source gpt-oss-120b par défaut — GROQ_API_KEY
+//  - Mistral   (GRATUIT en mode « free », vérification par téléphone) — MISTRAL_API_KEY
+//  - Perplexity (payant, avec recherche web) — PERPLEXITY_API_KEY
+// Ordre automatique : CHAT_PROVIDER si défini, sinon Groq → Mistral → Perplexity (premier dont la clé existe).
+// Si un fournisseur échoue (quota, panne), on passe au suivant.
 // Body : { messages: [{ role: 'user'|'assistant', content }], context: { quotes: [...], focus } }
 // Réponse : flux SSE simplifié — {type:'delta', text} … {type:'sources', items:[{title,url}]} … {type:'done'}
-// Sans clé PERPLEXITY_API_KEY (variable d'environnement Vercel) : 503 { error: 'no_key' } → l'interface
-// bascule alors sur l'assistant local.
+// Sans aucune clé : 503 { error: 'no_key' } → l'interface bascule alors sur l'assistant local (sources ouvertes).
 import { COMPANIES, DOMAINS } from '../src/data/companies.js';
 import { findCompanies } from '../src/data/assistant.js';
 import { getKnowledge, knowledgeDigest } from './_lib/open.js';
 
-const API_URL = 'https://api.perplexity.ai/chat/completions';
+export const PROVIDERS = {
+  groq: {
+    label: 'Groq',
+    url: 'https://api.groq.com/openai/v1/chat/completions',
+    keyEnv: 'GROQ_API_KEY',
+    model: () => process.env.GROQ_MODEL || 'openai/gpt-oss-120b',
+    webSearch: false,
+    // gpt-oss « réfléchit » avant de répondre : on lui laisse de la marge de jetons.
+    extra: () => ({ max_tokens: 2000, temperature: 0.3 }),
+  },
+  mistral: {
+    label: 'Mistral',
+    url: 'https://api.mistral.ai/v1/chat/completions',
+    keyEnv: 'MISTRAL_API_KEY',
+    model: () => process.env.MISTRAL_MODEL || 'mistral-large-latest',
+    webSearch: false,
+    extra: () => ({ max_tokens: 900, temperature: 0.3 }),
+  },
+  perplexity: {
+    label: 'Perplexity',
+    url: 'https://api.perplexity.ai/chat/completions',
+    keyEnv: 'PERPLEXITY_API_KEY',
+    model: () => process.env.PERPLEXITY_MODEL || 'sonar-pro',
+    webSearch: true,
+    extra: () => ({ max_tokens: 700, temperature: 0.2 }),
+  },
+};
+
+/** Fournisseurs disponibles (clé présente), dans l'ordre d'essai. */
+export function availableProviders(env = process.env) {
+  const order = ['groq', 'mistral', 'perplexity'];
+  const wanted = (env.CHAT_PROVIDER || '').toLowerCase();
+  const sorted = PROVIDERS[wanted] ? [wanted, ...order.filter((p) => p !== wanted)] : order;
+  return sorted.filter((id) => env[PROVIDERS[id].keyEnv]);
+}
 const MAX_BODY = 16 * 1024;
 const MAX_MESSAGES = 10;
 const MAX_CHARS = 600;
@@ -23,7 +61,7 @@ const SYSTEM = `Tu es « Orbit », l'assistant du site AI Orbit, qui suit les en
 Règles :
 - Réponds en français, de façon claire et concise (180 mots maximum), avec des listes courtes si utile.
 - Concentre-toi sur ces entreprises, leur rôle dans l'IA, leur actualité et leurs cours. Si la question sort de ce cadre, ramène poliment vers ce sujet.
-- Pour les cours du jour, utilise en priorité les données « Cours en direct » fournies ci-dessous (elles viennent du site). Appuie-toi aussi sur les « Données ouvertes » (Wikipedia/Wikidata, GDELT, SEC EDGAR) quand elles sont fournies ; complète avec tes recherches web et cite tes sources.
+- Pour les cours du jour, utilise en priorité les données « Cours en direct » fournies ci-dessous (elles viennent du site). Appuie-toi aussi sur les « Données ouvertes » (Wikipedia/Wikidata, GDELT, SEC EDGAR) quand elles sont fournies, et cite-les.
 - Mentionne les entreprises par leur symbole boursier entre parenthèses, par ex. NVIDIA (NVDA).
 - Ne donne jamais de conseil d'investissement personnalisé (pas de « achetez / vendez ») ; tu peux expliquer des faits et des tendances.
 
@@ -85,10 +123,34 @@ export function sanitize(payload) {
   return { messages: alternated, live, focus };
 }
 
+const NO_WEB = `\n- Tu n'as pas d'accès direct au web : base-toi sur les données fournies ci-dessous (cours en direct, Wikipedia/Wikidata, GDELT, SEC) et sur tes connaissances générales. N'invente aucun chiffre ni aucune actualité ; si une information manque ou peut être datée, dis-le. Pour l'actualité, cite les articles GDELT fournis (titre + lien).`;
+const WEB = `\n- Complète avec tes recherches web et cite tes sources.`;
+
+async function callProvider(id, system, messages) {
+  const p = PROVIDERS[id];
+  const res = await fetch(p.url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${process.env[p.keyEnv]}`, 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+    body: JSON.stringify({
+      model: p.model(),
+      messages: [{ role: 'system', content: system + (p.webSearch ? WEB : NO_WEB) }, ...messages],
+      stream: true,
+      ...p.extra(),
+    }),
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!res.ok || !res.body) {
+    const err = new Error(`upstream_${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'method' });
-  const key = process.env.PERPLEXITY_API_KEY;
-  if (!key) return json(res, 503, { error: 'no_key' });
+  const providers = availableProviders();
+  if (!providers.length) return json(res, 503, { error: 'no_key' });
 
   const ip = String(req.headers?.['x-forwarded-for'] || req.socket?.remoteAddress || 'anon').split(',')[0].trim();
   if (rateLimited(ip)) return json(res, 429, { error: 'rate_limited' });
@@ -116,30 +178,27 @@ export default async function handler(req, res) {
   const today = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'full', timeZone: 'Europe/Paris' }).format(new Date());
   const system = `${SYSTEM}\n\nDate du jour : ${today}.${payload.focus ? `\nL'utilisateur consulte actuellement la fiche : ${payload.focus}.` : ''}${payload.live ? `\n\nCours en direct (site AI Orbit) :\n${payload.live}` : ''}${openData ? `\n\nDonnées ouvertes (Wikipedia/Wikidata, GDELT, SEC EDGAR) :\n${openData}` : ''}`;
 
-  let upstream;
-  try {
-    upstream = await fetch(API_URL, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Accept: 'text/event-stream' },
-      body: JSON.stringify({
-        model: process.env.PERPLEXITY_MODEL || 'sonar-pro',
-        messages: [{ role: 'system', content: system }, ...payload.messages],
-        max_tokens: 700,
-        temperature: 0.2,
-        stream: true,
-      }),
-      signal: AbortSignal.timeout(30_000),
-    });
-  } catch {
-    return json(res, 502, { error: 'upstream_unreachable' });
+  // Premier fournisseur qui répond (bascule automatique en cas de quota dépassé ou de panne).
+  let upstream = null;
+  let provider = null;
+  let lastError = 'upstream_unreachable';
+  for (const id of providers) {
+    try {
+      upstream = await callProvider(id, system, payload.messages);
+      provider = id;
+      break;
+    } catch (e) {
+      lastError = e.message || lastError;
+    }
   }
-  if (!upstream.ok || !upstream.body) return json(res, 502, { error: `upstream_${upstream.status}` });
+  if (!upstream) return json(res, 502, { error: lastError });
 
   res.statusCode = 200;
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Accel-Buffering', 'no');
   const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
+  send({ type: 'meta', provider, label: PROVIDERS[provider].label, model: PROVIDERS[provider].model() });
 
   const reader = upstream.body.getReader();
   const decoder = new TextDecoder();
@@ -171,7 +230,7 @@ export default async function handler(req, res) {
   } catch {
     send({ type: 'error', error: 'stream_interrupted' });
   }
-  // Sources : celles de Perplexity, puis celles des données ouvertes utilisées.
+  // Sources : celles du fournisseur (Perplexity), puis celles des données ouvertes utilisées.
   for (const k of knowledge) for (const src of k.sources || []) sources.push({ title: `${src.name} — ${k.company.name}`, url: src.url });
   const safe = sources
     .filter((s) => /^https?:\/\//.test(s.url || ''))

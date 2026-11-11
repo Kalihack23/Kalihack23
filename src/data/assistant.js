@@ -130,7 +130,7 @@ export function localAnswer(question, store, { focus = null, noKey = false, know
   let cos = findCompanies(question);
   if (!cos.length && focus && has(n, ['elle', 'cette', 'ce titre', 'cette action', 'pourquoi', 'que fait', 'combien', 'prix', 'cours'])) cos = [focus];
   const domain = findDomain(question);
-  const footer = noKey && !knowledge ? '\n\n_Mode local : pour des réponses plus complètes, le site doit être en ligne (sources ouvertes) ou relié à Perplexity._' : '';
+  const footer = noKey && !knowledge ? '\n\n_Mode local : pour des réponses plus complètes, le site doit être en ligne (sources ouvertes) ou relié à une IA (Groq gratuit, Mistral ou Perplexity)._' : '';
 
   const wantsUp = has(n, ['hausse', 'monte', 'gagn', 'meilleur', 'top', 'progress', 'grimpe']);
   const wantsDown = has(n, ['baisse', 'chute', 'perd', 'pire', 'recul', 'flop', 'degringol']);

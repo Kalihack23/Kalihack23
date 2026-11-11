@@ -25,7 +25,7 @@ Un site interactif qui regroupe les entreprises qui construisent l’intelligenc
 - **Motion design** : une onde à chaque nouveau cours, des couleurs et des compteurs animés, un classement des hausses et baisses qui se réordonne en glissant, un fond d’ambiance lumineux.
 - **Liste de valeurs façon app Bourse d’Apple** : symbole, nom, mini-courbe de séance, et **pastille verte ou rouge**. Toucher une pastille fait passer l’affichage de la variation au prix, puis à la capitalisation. Tri par variation, capitalisation ou A–Z, avec une animation de réordonnancement. Sur mobile, c’est l’onglet « Liste ».
 - **Fiche entreprise façon app Bourse** : symbole, prix dans sa devise, variation en valeur et en %, périodes **1J · 1S · 1M · 6M · 1A**. Le graphique a une échelle à droite, un quadrillage léger et la clôture de la veille en pointillés. **En parcourant la courbe au doigt, le prix, la variation et la date de l’en-tête se mettent à jour**. Suivent un tableau de statistiques (clôture veille, haut et bas de séance, capitalisation, volatilité, place de cotation…), une section « À propos » et les **actualités**.
-- **Chatbot « Orbit »** : le bouton « Demander à Orbit », en bas à droite, ouvre une discussion sur les entreprises du site (cours, rôle dans l’IA, comparaisons, actualité). Relié à **Perplexity**, il cite ses sources, ses réponses s’affichent au fil de l’eau, et les symboles cités ouvrent la fiche. Sans clé Perplexity, un assistant local répond aux questions courantes à partir des données du site.
+- **Chatbot « Orbit »** : l’onglet « Orbit IA » (ou le bouton en bas à droite sur mobile) ouvre une discussion sur les entreprises du site (cours, rôle dans l’IA, comparaisons, actualité). Relié gratuitement à **Groq** (ou Mistral, ou Perplexity), il cite ses sources, ses réponses s’affichent au fil de l’eau, et les symboles cités ouvrent la fiche. Sans clé Perplexity, un assistant local répond aux questions courantes à partir des données du site.
 - **Partager** : génère une **image 1080×1350** (format Instagram, TikTok ou X) du tableau de bord, avec l’indice IA et le top 3 des hausses et des baisses. Une **légende est prête à poster**. Sur mobile, le bouton ouvre le partage natif.
 - **Thème clair ou sombre** : se choisit avec le bouton soleil/lune (révélation circulaire, comme sur macOS) ou dans les Réglages. Le choix est mémorisé. À la première visite, le site suit le réglage de l'appareil. Le thème clair reprend le mode clair d'iOS, et l'image de partage suit le thème actif.
 - **Bulles vivantes** : dans chaque domaine, les bulles tournent lentement autour du centre, dérivent et « respirent ». Elles s'écartent quand la souris passe, puis reviennent avec un ressort. Sur iPhone et iPad, elles glissent selon l'inclinaison de l'appareil (gyroscope), en parallaxe : les petites bulles bougent plus que les grandes.
@@ -73,6 +73,22 @@ L’agent Orbit et les fiches s’appuient, à chaque question, sur des sources 
 | **SEC EDGAR** | Comptes officiels des sociétés américaines : chiffre d’affaires, résultat net, dernier trimestre, rapports 10-K / 10-Q / 8-K | Domaine public |
 
 Sans clé Perplexity, Orbit rédige ses réponses à partir de ces sources et les cite. Avec la clé, Perplexity les reçoit en plus de sa recherche web. La SEC demande un contact dans les requêtes : ajoutez sur Vercel la variable `SEC_USER_AGENT`, par exemple `AI Orbit votre@email.fr`. Sans elle, la SEC peut refuser les requêtes, et la partie « résultats » est alors simplement omise.
+
+## Cerveau de l’agent (gratuit) : Groq ou Mistral
+
+Orbit rédige ses réponses avec un modèle d’IA appelé côté serveur par `/api/chat`. Le premier fournisseur dont la clé existe est utilisé, et en cas d’échec ou de quota dépassé, le suivant prend le relais :
+
+| Fournisseur | Prix | Variable Vercel | Modèle par défaut |
+| --- | --- | --- | --- |
+| **Groq** (recommandé) | **Gratuit**, sans carte bancaire (~1 000 questions/jour) | `GROQ_API_KEY` | `openai/gpt-oss-120b` (open source, `GROQ_MODEL` pour changer) |
+| **Mistral AI** | **Gratuit** en mode « free » (vérification par téléphone) | `MISTRAL_API_KEY` | `mistral-large-latest` (`MISTRAL_MODEL`) |
+| **Perplexity** | Payant, avec recherche web | `PERPLEXITY_API_KEY` | `sonar-pro` (`PERPLEXITY_MODEL`) |
+
+1. Créez une clé gratuite sur [console.groq.com/keys](https://console.groq.com/keys).
+2. Sur Vercel : *Settings → Environment Variables*, ajoutez `GROQ_API_KEY`, puis redéployez.
+3. Facultatif : `CHAT_PROVIDER=groq|mistral|perplexity` pour imposer un fournisseur.
+
+Les clés restent côté serveur. Groq et Mistral n’ayant pas d’accès au web, Orbit leur fournit les cours en direct et les sources ouvertes (Wikipedia, GDELT, SEC), et leur demande de ne rien inventer. Sans aucune clé, Orbit répond quand même à partir de ces sources (mode « Sources ouvertes »).
 
 ## Chatbot : relier Perplexity
 
